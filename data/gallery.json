@@ -1,0 +1,42 @@
+[
+  {
+    "id": "gal-1",
+    "url": "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=1200&q=80",
+    "caption": "Luxury Swiss Tents under the star-lit sky in Ghangaria"
+  },
+  {
+    "id": "gal-2",
+    "url": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80",
+    "caption": "Majestic snow-capped mountain ranges surrounding the basecamp"
+  },
+  {
+    "id": "gal-3",
+    "url": "https://images.unsplash.com/photo-1478131148058-269e8020e980?auto=format&fit=crop&w=1200&q=80",
+    "caption": "Backpacker's dome camp pitch in the Pine forests"
+  },
+  {
+    "id": "gal-4",
+    "url": "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=1200&q=80",
+    "caption": "Eco-friendly canvas cottage cabins in the valley"
+  },
+  {
+    "id": "gal-5",
+    "url": "https://images.unsplash.com/photo-1482862549707-f63cb32c5fd9?auto=format&fit=crop&w=1200&q=80",
+    "caption": "Scenic glacial streams passing through the Valley of Flowers national park"
+  },
+  {
+    "id": "gal-6",
+    "url": "https://images.unsplash.com/photo-1530541930197-ff16ac917b0e?auto=format&fit=crop&w=1200&q=80",
+    "caption": "Trekking trail winding up to the Hemkund Sahib Gurudwara"
+  },
+  {
+    "id": "gal-7",
+    "url": "https://images.unsplash.com/photo-1510312305653-8ed496efae75?auto=format&fit=crop&w=1200&q=80",
+    "caption": "Evening bonfire and storytelling session at basecamp"
+  },
+  {
+    "id": "gal-8",
+    "url": "https://images.unsplash.com/photo-1475483768296-6163e08872a1?auto=format&fit=crop&w=1200&q=80",
+    "caption": "Sunrise over the valley view from the campsite window"
+  }
+]
