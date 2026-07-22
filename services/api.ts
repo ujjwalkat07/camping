@@ -112,13 +112,60 @@ export const api = {
   // --- Package & Content Fetching Methods ---
   getPackages: async (): Promise<Package[]> => {
     await delay(300);
-    return packagesJson as Package[];
+    if (typeof window === 'undefined') return packagesJson as Package[];
+    let localPackages = localStorage.getItem('packages');
+    if (!localPackages) {
+      localStorage.setItem('packages', JSON.stringify(packagesJson));
+      return packagesJson as Package[];
+    }
+    return JSON.parse(localPackages) as Package[];
   },
 
   getPackageById: async (id: string): Promise<Package | null> => {
     await delay(200);
-    const item = packagesJson.find(p => p.id === id);
-    return item ? (item as Package) : null;
+    if (typeof window === 'undefined') {
+      const item = packagesJson.find(p => p.id === id);
+      return item ? (item as Package) : null;
+    }
+    const packagesList = await api.getPackages();
+    const item = packagesList.find(p => p.id === id);
+    return item || null;
+  },
+
+  createPackage: async (newPkg: Package): Promise<boolean> => {
+    await delay(400);
+    if (typeof window !== 'undefined') {
+      const packagesList = await api.getPackages();
+      packagesList.push(newPkg);
+      localStorage.setItem('packages', JSON.stringify(packagesList));
+      return true;
+    }
+    return false;
+  },
+
+  updatePackage: async (id: string, updatedFields: Partial<Package>): Promise<boolean> => {
+    await delay(400);
+    if (typeof window !== 'undefined') {
+      const packagesList = await api.getPackages();
+      const idx = packagesList.findIndex(p => p.id === id);
+      if (idx !== -1) {
+        packagesList[idx] = { ...packagesList[idx], ...updatedFields };
+        localStorage.setItem('packages', JSON.stringify(packagesList));
+        return true;
+      }
+    }
+    return false;
+  },
+
+  deletePackage: async (id: string): Promise<boolean> => {
+    await delay(300);
+    if (typeof window !== 'undefined') {
+      const packagesList = await api.getPackages();
+      const filtered = packagesList.filter(p => p.id !== id);
+      localStorage.setItem('packages', JSON.stringify(filtered));
+      return true;
+    }
+    return false;
   },
 
   getGallery: async (): Promise<GalleryItem[]> => {
@@ -188,7 +235,9 @@ export const api = {
   submitBooking: async (data: BookingSubmission): Promise<BookingResponse> => {
     await delay(600);
     
-    const targetPackage = packagesJson.find(p => p.id === data.packageId);
+    const localPkgsStr = typeof window !== 'undefined' ? localStorage.getItem('packages') : null;
+    const localPkgs: Package[] = localPkgsStr ? JSON.parse(localPkgsStr) : packagesJson;
+    const targetPackage = localPkgs.find(p => p.id === data.packageId);
     const rate = targetPackage ? targetPackage.price : 0;
     
     const totalAmount = (data.adults * rate) + (data.children * rate * 0.5);
@@ -247,13 +296,65 @@ export const api = {
   },
 
   // Owner/Admin Simulation API to approve/reject bookings
-  updateBookingStatus: async (bookingId: string, status: 'approved' | 'rejected'): Promise<boolean> => {
+  updateBookingStatus: async (bookingId: string, status: 'approved' | 'rejected' | 'pending' | 'pending_payment'): Promise<boolean> => {
     await delay(300);
     if (typeof window !== 'undefined') {
       const bookings = JSON.parse(localStorage.getItem('bookings') || '[]');
       const index = bookings.findIndex((b: any) => b.bookingId === bookingId);
       if (index !== -1) {
         bookings[index].status = status;
+        localStorage.setItem('bookings', JSON.stringify(bookings));
+        return true;
+      }
+    }
+    return false;
+  },
+
+  getAllBookings: async (): Promise<Booking[]> => {
+    await delay(400);
+    if (typeof window === 'undefined') return [];
+    return JSON.parse(localStorage.getItem('bookings') || '[]');
+  },
+
+  deleteBooking: async (bookingId: string): Promise<boolean> => {
+    await delay(300);
+    if (typeof window !== 'undefined') {
+      const bookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+      const filtered = bookings.filter((b: any) => b.bookingId !== bookingId);
+      localStorage.setItem('bookings', JSON.stringify(filtered));
+      return true;
+    }
+    return false;
+  },
+
+  updateBooking: async (bookingId: string, updatedFields: Partial<Booking>): Promise<boolean> => {
+    await delay(300);
+    if (typeof window !== 'undefined') {
+      const bookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+      const index = bookings.findIndex((b: any) => b.bookingId === bookingId);
+      if (index !== -1) {
+        // Calculate amount if adults or children or packageId is updated
+        let totalAmount = bookings[index].totalAmount;
+        if (
+          updatedFields.adults !== undefined || 
+          updatedFields.children !== undefined || 
+          updatedFields.packageId !== undefined
+        ) {
+          const packageId = updatedFields.packageId || bookings[index].packageId;
+          const localPkgsStr = localStorage.getItem('packages');
+          const localPkgs: Package[] = localPkgsStr ? JSON.parse(localPkgsStr) : packagesJson;
+          const targetPackage = localPkgs.find(p => p.id === packageId);
+          const rate = targetPackage ? targetPackage.price : 0;
+          const adults = updatedFields.adults !== undefined ? updatedFields.adults : bookings[index].adults;
+          const children = updatedFields.children !== undefined ? updatedFields.children : bookings[index].children;
+          totalAmount = (adults * rate) + (children * rate * 0.5);
+        }
+
+        bookings[index] = { 
+          ...bookings[index], 
+          ...updatedFields,
+          totalAmount
+        };
         localStorage.setItem('bookings', JSON.stringify(bookings));
         return true;
       }

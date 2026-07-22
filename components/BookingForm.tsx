@@ -568,7 +568,10 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
           className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 h-12 flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-emerald-600/10 active:scale-[0.99]"
         >
           {isSubmitting ? (
-            <LoadingSpinner size={20} className="text-white" />
+            <>
+              <LoadingSpinner size={18} className="text-white mr-1.5" />
+              Submitting Booking...
+            </>
           ) : (
             "Verify Details & Continue"
           )}

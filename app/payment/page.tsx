@@ -322,7 +322,10 @@ function PaymentContent() {
                 className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 h-10 flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-[0.99]"
               >
                 {isSubmitting ? (
-                  <LoadingSpinner size={18} className="text-white" />
+                  <>
+                    <LoadingSpinner size={16} className="text-white mr-1.5" />
+                    Submitting Payment Details...
+                  </>
                 ) : (
                   <>
                     <ShieldCheck className="size-4" /> Submit Final Booking

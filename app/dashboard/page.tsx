@@ -33,7 +33,6 @@ export default function DashboardPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [simulatedActionMessage, setSimulatedActionMessage] = useState("");
 
   // Profile Settings Form State
   const [activeTab, setActiveTab] = useState<"bookings" | "profile">("bookings");
@@ -90,23 +89,7 @@ export default function DashboardPage() {
     router.push("/");
   };
 
-  // Simulate owner action
-  const handleSimulateOwnerAction = async (bookingId: string, status: "approved" | "rejected") => {
-    try {
-      const success = await api.updateBookingStatus(bookingId, status);
-      if (success && currentUser) {
-        // Reload bookings
-        const data = await api.getBookings(currentUser.id);
-        data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setBookings(data);
-        
-        setSimulatedActionMessage(`Successfully simulated booking approval update to: ${status.toUpperCase()}!`);
-        setTimeout(() => setSimulatedActionMessage(""), 4000);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,9 +216,9 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <div className="grid gap-8 lg:grid-cols-3">
-            {/* Bookings List (2 Columns) */}
-            <div className="lg:col-span-2 space-y-6">
+          <div className="max-w-4xl mx-auto space-y-6">
+            {/* Bookings List */}
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-neutral-800 dark:text-white flex items-center gap-2">
                   <Compass className="size-5 text-emerald-600" /> Active Campsite Bookings
@@ -341,78 +324,6 @@ export default function DashboardPage() {
                   ))}
                 </div>
               )}
-            </div>
-
-            {/* Owner Simulation Panel (1 Column) */}
-            <div className="lg:col-span-1 space-y-6">
-              <div className="rounded-[2rem] border border-neutral-100 bg-emerald-50/50 p-6 dark:border-neutral-800 dark:bg-neutral-900/30 space-y-5">
-                
-                <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400">
-                  <Settings className="size-5" />
-                  <h3 className="text-sm font-extrabold">Camp Owner Simulation</h3>
-                </div>
-
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                  Use this mock dashboard panel to simulate the owner's manual approval or rejection workflow. In production, this trigger belongs to the admin console.
-                </p>
-
-                {simulatedActionMessage && (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-100 text-emerald-800 p-3 text-xs font-semibold dark:border-emerald-800/40 dark:bg-emerald-950/40 dark:text-emerald-400 animate-in fade-in duration-300">
-                    {simulatedActionMessage}
-                  </div>
-                )}
-
-                {/* List of bookings pending approval */}
-                <div className="space-y-3">
-                  <span className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider block">
-                    Pending Verification Requests ({bookings.filter(b => b.status === "pending").length})
-                  </span>
-
-                  {bookings.filter(b => b.status === "pending").length === 0 ? (
-                    <div className="rounded-xl border border-neutral-100 bg-white/40 p-4 text-center text-xs text-neutral-400 dark:border-neutral-800">
-                      No bookings are currently pending verification.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {bookings.filter(b => b.status === "pending").map((booking) => (
-                        <div 
-                          key={booking.bookingId} 
-                          className="rounded-xl bg-white border border-neutral-100 p-3.5 shadow-sm dark:bg-neutral-900/80 dark:border-neutral-800 space-y-3 text-xs"
-                        >
-                          <div className="flex justify-between items-center border-b pb-1.5 border-neutral-50 dark:border-neutral-800">
-                            <span className="font-extrabold text-neutral-800 dark:text-white font-mono">{booking.bookingId}</span>
-                            <span className="font-semibold text-emerald-600 dark:text-emerald-400">₹{booking.totalAmount.toLocaleString("en-IN")}</span>
-                          </div>
-                          
-                          <div className="space-y-1 text-[11px] text-neutral-500 dark:text-neutral-400">
-                            <div>Package: <span className="font-semibold text-neutral-700 dark:text-neutral-300">{booking.packageName}</span></div>
-                            <div>UTR Ref: <span className="font-mono font-semibold text-neutral-700 dark:text-neutral-300">{booking.utr}</span></div>
-                            <div>Receipt File: <span className="font-semibold text-neutral-700 dark:text-neutral-300">{booking.screenshotName}</span></div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2 pt-1">
-                            <Button 
-                              onClick={() => handleSimulateOwnerAction(booking.bookingId, "approved")}
-                              size="sm"
-                              className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-8 text-[11px]"
-                            >
-                              Approve
-                            </Button>
-                            <Button 
-                              onClick={() => handleSimulateOwnerAction(booking.bookingId, "rejected")}
-                              size="sm"
-                              className="rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold h-8 text-[11px]"
-                            >
-                              Reject
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-              </div>
             </div>
           </div>
         </div>

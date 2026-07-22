@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Compass, Flame, Heart, Menu, LogIn, User as UserIcon, MapPin, LogOut } from "lucide-react";
+import { Compass, Flame, Heart, Menu, LogIn, User as UserIcon, MapPin, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useState, useEffect } from "react";
 import { api, User } from "@/services/api";
@@ -17,6 +18,7 @@ export function Navbar() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [isExploreOpen, setIsExploreOpen] = useState(false);
 
   // Sync user profile state
   useEffect(() => {
@@ -54,39 +56,64 @@ export function Navbar() {
 
         {/* Desktop Navigation */}
         <nav className="hidden items-center gap-6 md:flex">
-          <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-1.5 text-sm font-medium text-neutral-600 outline-none hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white">
-              <Compass className="size-4" /> Explore Spots
+          <DropdownMenu onOpenChange={setIsExploreOpen}>
+            <DropdownMenuTrigger className="flex items-center gap-1.5 text-sm font-semibold text-neutral-600 outline-none hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white transition-colors group">
+              <Compass className="size-4 text-emerald-600 dark:text-emerald-450" /> 
+              <span>Explore Spots</span>
+              <ChevronDown className={`size-3 text-neutral-400 group-hover:text-neutral-600 transition-transform duration-200 ${isExploreOpen ? "rotate-180" : ""}`} />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48 rounded-xl p-1">
+            <DropdownMenuContent align="start" className="w-64 rounded-2xl p-2 border border-neutral-100 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 shadow-xl backdrop-blur-md">
               <DropdownMenuItem asChild>
-                <Link href="/packages" className="flex items-center gap-2 rounded-lg cursor-pointer">
-                  <MapPin className="size-4 text-emerald-600" /> All Packages
+                <Link href="/packages" className="flex items-start gap-3 rounded-xl p-2.5 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-650 dark:bg-emerald-950/50 dark:text-emerald-450">
+                    <MapPin className="size-4" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-bold text-neutral-800 dark:text-neutral-250">All Packages</div>
+                    <div className="text-[10px] text-neutral-450 font-normal leading-normal">Browse all campsite packages</div>
+                  </div>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/gallery" className="flex items-center gap-2 rounded-lg cursor-pointer">
-                  <Compass className="size-4 text-emerald-600" /> Photo Gallery
+                <Link href="/gallery" className="flex items-start gap-3 rounded-xl p-2.5 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-650 dark:bg-sky-950/50 dark:text-sky-450">
+                    <Compass className="size-4" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-bold text-neutral-800 dark:text-neutral-250">Photo Gallery</div>
+                    <div className="text-[10px] text-neutral-450 font-normal leading-normal">Take a visual tour of Valley camps</div>
+                  </div>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/about" className="flex items-center gap-2 rounded-lg cursor-pointer">
-                  <UserIcon className="size-4 text-emerald-600" /> About Camp
+                <Link href="/about" className="flex items-start gap-3 rounded-xl p-2.5 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-655 dark:bg-amber-950/50 dark:text-amber-450">
+                    <UserIcon className="size-4" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-bold text-neutral-800 dark:text-neutral-250">About Camp</div>
+                    <div className="text-[10px] text-neutral-450 font-normal leading-normal">Safety guidelines & our crew</div>
+                  </div>
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Link href="/packages" className="flex items-center gap-1.5 text-sm font-medium text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white">
+          <Link href="/packages" className="flex items-center gap-1.5 text-sm font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white transition-colors">
             <Heart className="size-4 text-rose-500 fill-rose-500/10" /> Packages
           </Link>
 
-          <Link href="/faq" className="text-sm font-medium text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white">
+          <Link href="/faq" className="text-sm font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white transition-colors">
             FAQs
           </Link>
 
-          <Link href="/contact" className="text-sm font-medium text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white">
+          <Link href="/contact" className="text-sm font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white transition-colors">
             Contact Us
+          </Link>
+
+          <Link href="/admin" className="text-xs font-bold text-emerald-650 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 flex items-center gap-1.5 transition-colors bg-emerald-50/50 hover:bg-emerald-50 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-100/50 dark:border-emerald-900/30">
+            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            Admin Panel
           </Link>
         </nav>
 
@@ -96,38 +123,52 @@ export function Navbar() {
             <>
               <Link
                 href="/dashboard"
-                className="text-sm font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
+                className="text-sm font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white transition-colors"
               >
                 My Bookings
               </Link>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-xl border-neutral-200 dark:border-neutral-800 flex items-center gap-1.5">
-                    <div className="size-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px] font-bold dark:bg-emerald-950/60 dark:text-emerald-300">
+                  <Button variant="outline" className="rounded-xl border-neutral-200 dark:border-neutral-800 flex items-center gap-1.5 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors h-9 px-3">
+                    <div className="size-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px] font-bold dark:bg-emerald-950/60 dark:text-emerald-350">
                       {user.name[0].toUpperCase()}
                     </div>
-                    <span className="text-xs font-semibold">{user.name.split(" ")[0]}</span>
+                    <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{user.name.split(" ")[0]}</span>
+                    <ChevronDown className="size-3 text-neutral-400" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 rounded-xl p-1">
+                <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 border border-neutral-100 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 shadow-xl backdrop-blur-md">
+                  <div className="px-2.5 py-1.5 border-b border-neutral-100 dark:border-neutral-800 mb-1">
+                    <div className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-wider">Signed in as</div>
+                    <div className="text-xs font-extrabold text-neutral-800 dark:text-neutral-200 truncate mt-0.5">{user.name}</div>
+                  </div>
                   <DropdownMenuItem asChild>
-                    <Link href="/dashboard" className="flex items-center gap-2 rounded-lg cursor-pointer">
-                      <UserIcon className="size-4 text-emerald-600" /> Traveler Dashboard
+                    <Link href="/dashboard" className="flex items-center gap-2.5 rounded-xl p-2 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                      <UserIcon className="size-4 text-emerald-600 dark:text-emerald-450" /> 
+                      <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Traveler Dashboard</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 rounded-lg cursor-pointer text-destructive focus:text-destructive">
-                    <LogOut className="size-4" /> Log Out
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin" className="flex items-center gap-2.5 rounded-xl p-2 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                      <Compass className="size-4 text-emerald-600 dark:text-emerald-450" /> 
+                      <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Admin Control Center</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="my-1 border-t border-neutral-100 dark:border-neutral-800" />
+                  <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2.5 rounded-xl p-2 cursor-pointer text-rose-600 dark:text-rose-455 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors focus:bg-rose-50 focus:text-rose-600">
+                    <LogOut className="size-4" /> 
+                    <span className="text-xs font-bold">Sign Out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
           ) : (
             <>
-              <Link href="/login" className="text-sm font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white">
+              <Link href="/login" className="text-sm font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white transition-colors">
                 Sign In
               </Link>
-              <Button asChild size="lg" className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-lg shadow-emerald-600/10 px-5 transition-all active:scale-[0.98]">
+              <Button asChild size="sm" className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg shadow-emerald-600/10 px-4 h-9 transition-all active:scale-[0.98]">
                 <Link href="/packages" className="flex items-center gap-1.5">
                   <LogIn className="size-4" /> Book Now
                 </Link>
@@ -166,6 +207,9 @@ export function Navbar() {
             </Link>
             <Link href="/contact" onClick={() => setIsOpen(false)} className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
               Contact
+            </Link>
+            <Link href="/admin" onClick={() => setIsOpen(false)} className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+              Admin Panel
             </Link>
             
             <hr className="border-neutral-100 dark:border-neutral-800" />
