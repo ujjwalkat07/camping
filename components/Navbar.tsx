@@ -20,16 +20,25 @@ export function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [isExploreOpen, setIsExploreOpen] = useState(false);
 
-  // Sync user profile state
+  // Sync user profile state — re-check on mount, storage events, and page focus
   useEffect(() => {
-    setUser(api.getCurrentUser());
-
     const syncAuth = () => {
       setUser(api.getCurrentUser());
     };
 
+    syncAuth();
+
     window.addEventListener("storage", syncAuth);
-    return () => window.removeEventListener("storage", syncAuth);
+    window.addEventListener("focus", syncAuth);
+
+    // Also poll every 2s to catch cookie changes (e.g. after redirect from login)
+    const interval = setInterval(syncAuth, 2000);
+
+    return () => {
+      window.removeEventListener("storage", syncAuth);
+      window.removeEventListener("focus", syncAuth);
+      clearInterval(interval);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -110,11 +119,6 @@ export function Navbar() {
           <Link href="/contact" className="text-sm font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white transition-colors">
             Contact Us
           </Link>
-
-          <Link href="/admin" className="text-xs font-bold text-emerald-650 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 flex items-center gap-1.5 transition-colors bg-emerald-50/50 hover:bg-emerald-50 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-100/50 dark:border-emerald-900/30">
-            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            Admin Panel
-          </Link>
         </nav>
 
         {/* Action Buttons (Auth Conditioned) */}
@@ -149,12 +153,6 @@ export function Navbar() {
                       <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Traveler Dashboard</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin" className="flex items-center gap-2.5 rounded-xl p-2 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
-                      <Compass className="size-4 text-emerald-600 dark:text-emerald-450" /> 
-                      <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Admin Control Center</span>
-                    </Link>
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator className="my-1 border-t border-neutral-100 dark:border-neutral-800" />
                   <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2.5 rounded-xl p-2 cursor-pointer text-rose-600 dark:text-rose-455 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors focus:bg-rose-50 focus:text-rose-600">
                     <LogOut className="size-4" /> 
@@ -167,6 +165,9 @@ export function Navbar() {
             <>
               <Link href="/login" className="text-sm font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white transition-colors">
                 Sign In
+              </Link>
+              <Link href="/signup" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 transition-colors">
+                Sign Up
               </Link>
               <Button asChild size="sm" className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg shadow-emerald-600/10 px-4 h-9 transition-all active:scale-[0.98]">
                 <Link href="/packages" className="flex items-center gap-1.5">
@@ -207,9 +208,6 @@ export function Navbar() {
             </Link>
             <Link href="/contact" onClick={() => setIsOpen(false)} className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
               Contact
-            </Link>
-            <Link href="/admin" onClick={() => setIsOpen(false)} className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-              Admin Panel
             </Link>
             
             <hr className="border-neutral-100 dark:border-neutral-800" />

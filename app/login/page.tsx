@@ -1,27 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { ShieldCheck, Mail, User as UserIcon, Lock } from "lucide-react";
+import { ShieldCheck, Mail, Lock, KeyRound, ArrowLeft, UserPlus } from "lucide-react";
+import Link from "next/link";
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams ? searchParams.get("redirect") || "/" : "/";
 
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState<"login" | "forgot">("login");
   const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  
+
+  // Forgot password OTP states
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // If user is already logged in, redirect them out
+  // If user is already logged in, redirect out
   useEffect(() => {
     const currentUser = api.getCurrentUser();
     if (currentUser) {
@@ -32,29 +38,52 @@ function LoginContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccessMsg("");
 
     if (!email.trim()) {
       setError("Email address is required");
       return;
     }
 
-    if (isSignUp && !name.trim()) {
-      setError("Full Name is required for registration");
-      return;
-    }
-
     setIsLoading(true);
     try {
-      // Mock login / signup
-      const user = await api.login(email.trim(), isSignUp ? name.trim() : undefined);
-      
-      // Dispatch storage event to notify Navbar of auth state update
-      window.dispatchEvent(new Event("storage"));
-      
-      // Redirect back
-      router.push(redirectUrl);
-    } catch (err) {
-      setError("Authentication failed. Please check details.");
+      if (mode === "login") {
+        if (!password) {
+          setError("Password is required");
+          setIsLoading(false);
+          return;
+        }
+
+        await api.login(email.trim(), password);
+
+        // Small delay to ensure cookies are fully written before redirect
+        await new Promise(resolve => setTimeout(resolve, 100));
+        router.push(redirectUrl);
+      } else if (mode === "forgot") {
+        if (!otpSent) {
+          await api.requestPasswordResetOtp(email.trim());
+          setOtpSent(true);
+          setSuccessMsg("OTP sent to your email! Please enter the 6-digit OTP and your new password.");
+        } else {
+          if (!otp || otp.length !== 6) {
+            setError("Please enter valid 6-digit OTP");
+            setIsLoading(false);
+            return;
+          }
+          if (!newPassword || newPassword.length < 12) {
+            setError("New password must be at least 12 characters");
+            setIsLoading(false);
+            return;
+          }
+          await api.confirmPasswordReset(email.trim(), otp.trim(), newPassword);
+          setSuccessMsg("Password reset successfully! Please sign in with your new password.");
+          setMode("login");
+          setOtpSent(false);
+        }
+      }
+    } catch (err: any) {
+      const message = err.message || "Authentication failed. Please try again.";
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -62,47 +91,38 @@ function LoginContent() {
 
   return (
     <div className="mx-auto max-w-md px-4 py-16 flex flex-col justify-center min-h-[70vh]">
-      
+
       <div className="rounded-[2.5rem] border border-neutral-100 bg-white p-8 shadow-xl dark:border-neutral-800 dark:bg-neutral-900/50 space-y-6">
-        
-        {/* Title */}
+
+        {/* Header */}
         <div className="text-center space-y-1.5">
           <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 mb-2">
-            <ShieldCheck className="size-6" />
+            {mode === "forgot" ? <KeyRound className="size-6" /> : <ShieldCheck className="size-6" />}
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
-            {isSignUp ? "Create your account" : "Welcome back"}
+            {mode === "forgot" ? "Reset Password" : "Welcome back"}
           </h1>
           <p className="text-xs text-neutral-400">
-            {isSignUp ? "Sign up to start booking adventure camps" : "Log in to manage your bookings and payments"}
+            {mode === "forgot"
+              ? "Enter your registered email to receive a password reset OTP"
+              : "Log in to manage your campsite bookings and payments"}
           </p>
         </div>
 
+        {/* Alerts */}
+        {error && (
+          <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive">
+            {error}
+          </div>
+        )}
+        {successMsg && (
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            {successMsg}
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          
-          {error && (
-            <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive">
-              {error}
-            </div>
-          )}
-
-          {/* Full Name (Sign Up only) */}
-          {isSignUp && (
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Full Name</label>
-              <div className="relative flex items-center">
-                <UserIcon className="size-4 text-neutral-400 absolute left-3" />
-                <Input
-                  type="text"
-                  placeholder="e.g. Priyanth Sen"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="rounded-xl pl-9 border-neutral-200 focus-visible:ring-emerald-600/30"
-                />
-              </div>
-            </div>
-          )}
 
           {/* Email */}
           <div className="space-y-1">
@@ -111,6 +131,7 @@ function LoginContent() {
               <Mail className="size-4 text-neutral-400 absolute left-3" />
               <Input
                 type="email"
+                required
                 placeholder="e.g. user@domain.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -119,20 +140,65 @@ function LoginContent() {
             </div>
           </div>
 
-          {/* Password (Mock input) */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Password</label>
-            <div className="relative flex items-center">
-              <Lock className="size-4 text-neutral-400 absolute left-3" />
-              <Input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="rounded-xl pl-9 border-neutral-200 focus-visible:ring-emerald-600/30"
-              />
+          {/* Password (Login mode) */}
+          {mode === "login" && (
+            <div className="space-y-1">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Password</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("forgot");
+                    setError("");
+                    setSuccessMsg("");
+                  }}
+                  className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                >
+                  Forgot?
+                </button>
+              </div>
+              <div className="relative flex items-center">
+                <Lock className="size-4 text-neutral-400 absolute left-3" />
+                <Input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="rounded-xl pl-9 border-neutral-200 focus-visible:ring-emerald-600/30"
+                />
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* OTP and New Password fields for Forgot Password */}
+          {mode === "forgot" && otpSent && (
+            <>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400">6-Digit OTP</label>
+                <Input
+                  type="text"
+                  required
+                  placeholder="123456"
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  className="rounded-xl border-neutral-200 text-center tracking-widest text-lg font-mono focus-visible:ring-emerald-600/30"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400">New Password (min 12 chars)</label>
+                <Input
+                  type="password"
+                  required
+                  placeholder="••••••••••••"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="rounded-xl border-neutral-200 focus-visible:ring-emerald-600/30"
+                />
+              </div>
+            </>
+          )}
 
           {/* Submit Button */}
           <Button
@@ -142,8 +208,10 @@ function LoginContent() {
           >
             {isLoading ? (
               <LoadingSpinner size={20} className="text-white" />
+            ) : mode === "forgot" ? (
+              otpSent ? "Reset Password" : "Send Reset OTP"
             ) : (
-              isSignUp ? "Register Account" : "Access Booking Portal"
+              "Access Booking Portal"
             )}
           </Button>
 
@@ -151,17 +219,31 @@ function LoginContent() {
 
         <hr className="border-neutral-100 dark:border-neutral-800" />
 
-        {/* Toggle Mode */}
+        {/* Links to Signup */}
         <div className="text-center">
-          <button
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              setError("");
-            }}
-            className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
-          >
-            {isSignUp ? "Already have an account? Sign In" : "New camper? Register an account"}
-          </button>
+          {mode === "forgot" ? (
+            <button
+              onClick={() => {
+                setMode("login");
+                setError("");
+                setSuccessMsg("");
+                setOtpSent(false);
+              }}
+              className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:underline flex items-center justify-center gap-1 mx-auto"
+            >
+              <ArrowLeft className="size-3" /> Back to Sign In
+            </button>
+          ) : (
+            <p className="text-xs text-neutral-500">
+              New camper?{" "}
+              <Link
+                href={`/signup${redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
+                className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
+              >
+                <UserPlus className="size-3.5 inline" /> Register an account
+              </Link>
+            </p>
+          )}
         </div>
 
       </div>
@@ -169,8 +251,6 @@ function LoginContent() {
     </div>
   );
 }
-
-import { Suspense } from "react";
 
 export default function LoginPage() {
   return (

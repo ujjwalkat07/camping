@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { api, Booking, Package, TravelerDetail } from "@/services/api";
+import { useRouter } from "next/navigation";
+import { api, Booking, Package, TravelerDetail, User as UserType } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import {
@@ -28,10 +29,14 @@ import {
   MapPin,
   Sparkles,
   Check,
-  FileText
+  FileText,
+  LogOut,
+  ShieldCheck
 } from "lucide-react";
 
 export default function AdminPage() {
+  const router = useRouter();
+  const [adminUser, setAdminUser] = useState<UserType | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -199,121 +204,78 @@ export default function AdminPage() {
     }
   };
 
+  const [isAccessDenied, setIsAccessDenied] = useState(false);
+
   useEffect(() => {
-    loadData();
-  }, []);
+    const admin = api.getAdminUser();
+    if (!admin) {
+      router.push("/admin/login");
+      return;
+    }
 
-  // Quick Seed Mock Bookings
-  const handleSeedMockData = () => {
-    const mockBookings: Booking[] = [
-      {
-        bookingId: "BK-829104",
-        userId: "usr-4921",
-        fullName: "Aarav Sharma",
-        email: "aarav.sharma@example.com",
-        mobileNumber: "9876543210",
-        packageId: "luxury-swiss-camp",
-        packageName: "Valley Vista Swiss Luxury Camp",
-        adults: 2,
-        children: 1,
-        travelDate: "2026-08-10",
-        specialRequests: "Prefer ground floor camp near dining area.",
-        travelers: [
-          { fullName: "Aarav Sharma", age: 34, gender: "Male", idProofType: "Aadhaar Card", idProofNumber: "1234-5678-9012" },
-          { fullName: "Priya Sharma", age: 31, gender: "Female", idProofType: "Aadhaar Card", idProofNumber: "9876-5432-1098" },
-          { fullName: "Kabir Sharma", age: 7, gender: "Male", idProofType: "School ID", idProofNumber: "SCH-998" }
-        ],
-        totalAmount: 37497.5, // (2 * 14999) + (1 * 14999 * 0.5)
-        status: "approved",
-        utr: "UTR9928104812",
-        screenshotName: "aarav_payment_receipt.png",
-        date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-      },
-      {
-        bookingId: "BK-194012",
-        userId: "usr-8812",
-        fullName: "Meera Nair",
-        email: "meera.nair@example.com",
-        mobileNumber: "8899001122",
-        packageId: "explorer-dome-camp",
-        packageName: "Adventure Trekker's Dome Camp",
-        adults: 1,
-        children: 0,
-        travelDate: "2026-08-15",
-        specialRequests: "Vegetarian meals only.",
-        travelers: [
-          { fullName: "Meera Nair", age: 26, gender: "Female", idProofType: "Passport", idProofNumber: "L882910" }
-        ],
-        totalAmount: 8999,
-        status: "pending",
-        utr: "UTR8829104812",
-        screenshotName: "meera_payment.jpg",
-        date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
-      },
-      {
-        bookingId: "BK-472091",
-        userId: "usr-3209",
-        fullName: "Rahul Verma",
-        email: "rahul.verma@example.com",
-        mobileNumber: "7766554433",
-        packageId: "eco-wilderness-camp",
-        packageName: "Valley Wilderness Eco Camp",
-        adults: 2,
-        children: 0,
-        travelDate: "2026-09-02",
-        specialRequests: "",
-        travelers: [
-          { fullName: "Rahul Verma", age: 29, gender: "Male", idProofType: "Voter ID", idProofNumber: "XYZ998124" },
-          { fullName: "Siddharth Goel", age: 28, gender: "Male", idProofType: "Aadhaar Card", idProofNumber: "4455-6677-8899" }
-        ],
-        totalAmount: 11998,
-        status: "pending_payment",
-        date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
-      },
-      {
-        bookingId: "BK-991204",
-        userId: "usr-5521",
-        fullName: "Ananya Sen",
-        email: "ananya.sen@example.com",
-        mobileNumber: "9001122334",
-        packageId: "luxury-swiss-camp",
-        packageName: "Valley Vista Swiss Luxury Camp",
-        adults: 3,
-        children: 0,
-        travelDate: "2026-08-22",
-        specialRequests: "Arriving late evening, please save dinner.",
-        travelers: [
-          { fullName: "Ananya Sen", age: 42, gender: "Female", idProofType: "Passport", idProofNumber: "Z112233" },
-          { fullName: "Sujata Sen", age: 67, gender: "Female", idProofType: "Aadhaar Card", idProofNumber: "8899-7766-5544" },
-          { fullName: "Rohan Sen", age: 15, gender: "Male", idProofType: "School ID", idProofNumber: "SCH-771" }
-        ],
-        totalAmount: 44997,
-        status: "rejected",
-        utr: "UTR0012938120",
-        screenshotName: "failed_tx_screenshot.png",
-        date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
-      }
-    ];
+    const roles = Array.isArray(admin.roles) ? admin.roles : [];
+    const roleStr = typeof (admin as any).role === "string" ? (admin as any).role.toUpperCase() : "";
+    const hasAdminPermission =
+      roles.includes("ROLE_ADMIN") ||
+      roles.includes("admin") ||
+      roles.includes("ADMIN") ||
+      roleStr === "ADMIN" ||
+      roleStr === "ROLE_ADMIN";
 
-    localStorage.setItem("bookings", JSON.stringify(mockBookings));
+    if (!hasAdminPermission) {
+      setIsAccessDenied(true);
+      setIsLoading(false);
+      return;
+    }
+
+    setAdminUser(admin);
     loadData();
+  }, [router]);
+
+  const handleAdminLogout = async () => {
+    await api.adminLogout();
+    window.dispatchEvent(new Event("storage"));
+    router.push("/admin/login");
   };
 
   // Delete a booking
-  const handleDeleteBooking = async (bookingId: string) => {
-    if (confirm(`Are you sure you want to delete Booking ${bookingId}?`)) {
-      const success = await api.deleteBooking(bookingId);
-      if (success) {
-        setBookings(bookings.filter(b => b.bookingId !== bookingId));
-      }
+  const handleDeleteBooking = async (booking: Booking | string) => {
+    const targetBooking = typeof booking === 'object' ? booking : bookings.find(b => b.bookingId === booking || String(b.id) === booking);
+    const targetId = targetBooking?.id !== undefined && targetBooking?.id !== null && String(targetBooking.id) !== '' ? String(targetBooking.id) : (typeof booking === 'string' ? booking : booking.bookingId);
+    const displayId = typeof booking === 'object' ? booking.bookingId : booking;
+
+    if (confirm(`Are you sure you want to delete Booking ${displayId}?`)) {
+      setBookings(prev => prev.filter(b => b.bookingId !== displayId && String(b.id) !== String(targetId)));
+      await api.deleteBooking(targetId);
     }
   };
 
   // Change status of booking
-  const handleStatusChange = async (bookingId: string, status: Booking["status"]) => {
-    const success = await api.updateBookingStatus(bookingId, status);
-    if (success) {
-      setBookings(bookings.map(b => b.bookingId === bookingId ? { ...b, status } : b));
+  const handleStatusChange = async (booking: Booking | string, status: Booking["status"]) => {
+    const targetBooking = typeof booking === 'object' ? booking : bookings.find(b => b.bookingId === booking || String(b.id) === booking);
+    const targetId = targetBooking?.id !== undefined && targetBooking?.id !== null && String(targetBooking.id) !== '' ? String(targetBooking.id) : (typeof booking === 'string' ? booking : booking.bookingId);
+    const displayId = typeof booking === 'object' ? booking.bookingId : booking;
+console.log("detail",booking)
+    // Optimistically update UI immediately
+    setBookings(prev => prev.map(b => (b.bookingId === displayId || String(b.id) === String(targetId)) ? { ...b, status } : b));
+
+    let success = false;
+    if (status === "approved") {
+      success = await api.approveBooking(targetId);
+    } else if (status === "rejected") {
+      success = await api.rejectBooking(targetId);
+    } else {
+      success = await api.updateBookingStatus(targetId, status);
+    }
+
+    if (!success && targetBooking?.bookingId && String(targetBooking.bookingId) !== targetId) {
+      if (status === "approved") {
+        await api.approveBooking(targetBooking.bookingId);
+      } else if (status === "rejected") {
+        await api.rejectBooking(targetBooking.bookingId);
+      } else {
+        await api.updateBookingStatus(targetBooking.bookingId, status);
+      }
     }
   };
 
@@ -392,7 +354,7 @@ export default function AdminPage() {
     const success = await api.updateBooking(editingBooking.bookingId, updatedFields);
     setIsSaving(false);
     if (success) {
-      // Reload from localstorage to capture calculated amount
+      // Reload from backend API to capture updated data
       const allData = await api.getAllBookings();
       setBookings(allData);
       setIsEditModalOpen(false);
@@ -549,41 +511,75 @@ export default function AdminPage() {
     );
   }
 
+  if (isAccessDenied) {
+    return (
+      <div className="flex min-h-[75vh] items-center justify-center px-4">
+        <div className="max-w-md w-full rounded-[2.5rem] border border-rose-200 bg-white p-8 text-center shadow-2xl dark:border-rose-950/40 dark:bg-neutral-900 space-y-5">
+          <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400">
+            <XCircle className="size-8" />
+          </div>
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-rose-600 dark:text-rose-400">
+              Permission Denied
+            </span>
+            <h2 className="text-2xl font-extrabold text-neutral-900 dark:text-white">
+              Administrator Access Required
+            </h2>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
+              Your current account does not have administrator privileges (<code className="bg-neutral-100 dark:bg-neutral-800 px-1 py-0.5 rounded text-[11px]">ROLE_ADMIN</code>) required to view or configure the system console.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 pt-2">
+            <Button
+              onClick={() => router.push("/admin/login")}
+              className="w-full rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs h-10 flex items-center justify-center gap-1.5"
+            >
+              <ShieldCheck className="size-4" /> Sign In with Admin Account
+            </Button>
+            <Button
+              onClick={() => router.push("/")}
+              variant="outline"
+              className="w-full rounded-xl border-neutral-200 text-neutral-600 dark:border-neutral-800 dark:text-neutral-300 font-bold text-xs h-10"
+            >
+              Return to Public Website
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 md:px-8 space-y-8 animate-in fade-in duration-300">
       
       {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-6 border-neutral-100 dark:border-neutral-800">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide flex items-center gap-1">
               <Sparkles className="size-3" /> System Console
             </span>
+            {adminUser && (
+              <span className="bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide flex items-center gap-1 border border-amber-300/40">
+                <ShieldCheck className="size-3 text-amber-600" /> Admin Verified: {adminUser.email}
+              </span>
+            )}
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white mt-1.5">
             System Administration
           </h1>
           <p className="text-xs text-neutral-500 mt-1">
-            Track user submissions, manage high-altitude campsite details, verify manual payment receipts, and configure camps.
+            Logged in as <strong className="font-bold text-neutral-800 dark:text-neutral-200">{adminUser?.name || adminUser?.email}</strong> ({adminUser?.roles?.join(", ") || "ROLE_ADMIN"}). Manage high-altitude campsite details and verify reservations.
           </p>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
           {activeTab === 'bookings' && (
-            <>
-              <Button
-                onClick={handleSeedMockData}
-                variant="outline"
-                className="flex-1 md:flex-initial rounded-xl border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/40 dark:text-emerald-400 dark:hover:bg-emerald-950/20 text-xs font-bold h-10 px-4"
-              >
-                <RefreshCw className="size-3.5 mr-1.5 animate-spin-hover" /> Seed Mock Data
-              </Button>
-              <Button
-                onClick={openAddModal}
-                className="flex-1 md:flex-initial rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-4 flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/10"
-              >
-                <Plus className="size-4" /> Add Booking
-              </Button>
-            </>
+            <Button
+              onClick={openAddModal}
+              className="flex-1 md:flex-initial rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-4 flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/10"
+            >
+              <Plus className="size-4" /> Add Booking
+            </Button>
           )}
           {activeTab === 'packages' && (
             <Button
@@ -593,6 +589,13 @@ export default function AdminPage() {
               <Plus className="size-4" /> Add Campsite
             </Button>
           )}
+          <Button
+            onClick={handleAdminLogout}
+            variant="outline"
+            className="rounded-xl border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/40 dark:text-rose-400 font-bold text-xs h-10 px-3.5 flex items-center gap-1.5"
+          >
+            <LogOut className="size-4" /> Sign Out
+          </Button>
         </div>
       </div>
 
@@ -780,7 +783,7 @@ export default function AdminPage() {
             <h3 className="text-base font-bold text-neutral-800 dark:text-white">No Bookings Found</h3>
             <p className="text-xs text-neutral-500 max-w-sm mt-1">
               {bookings.length === 0 
-                ? "The database is currently empty. Click 'Seed Mock Data' above to populate bookings instantly." 
+                ? "No bookings registered yet. New customer reservations will appear here automatically." 
                 : "No bookings match the selected status, campsite, or search filters."}
             </p>
           </div>
@@ -864,7 +867,7 @@ export default function AdminPage() {
                     <td className="py-4 px-4 text-center">
                       <select
                         value={booking.status}
-                        onChange={(e) => handleStatusChange(booking.bookingId, e.target.value as Booking["status"])}
+                        onChange={(e) => handleStatusChange(booking, e.target.value as Booking["status"])}
                         className={`mx-auto rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide border-0 outline-none text-center block cursor-pointer transition-colors ${
                           booking.status === "approved"
                             ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"

@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { api, Booking, User } from "@/services/api";
+import { tokenStorage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
@@ -47,7 +48,8 @@ function PaymentContent() {
     const loadBooking = async () => {
       try {
         setIsLoading(true);
-        const data = await api.getBookingById(bookingId);
+        const token = tokenStorage.getToken();
+        const data = await api.getBookingById(bookingId, token || undefined);
         if (data) {
           setBooking(data);
         }

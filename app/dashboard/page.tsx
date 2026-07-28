@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api, Booking, User } from "@/services/api";
+import { tokenStorage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { 
@@ -55,12 +56,29 @@ export default function DashboardPage() {
       router.push("/login?redirect=/dashboard");
       return;
     }
+
+    // Direct admins to the admin portal if they attempt to access user dashboard
+    const roles = Array.isArray(user.roles) ? user.roles : [];
+    const roleStr = typeof (user as any).role === "string" ? (user as any).role.toUpperCase() : "";
+    const isAdmin =
+      roles.includes("ROLE_ADMIN") ||
+      roles.includes("admin") ||
+      roles.includes("ADMIN") ||
+      roleStr === "ADMIN" ||
+      roleStr === "ROLE_ADMIN";
+
+    if (isAdmin) {
+      router.push("/admin");
+      return;
+    }
+
     setCurrentUser(user);
 
     const loadBookings = async () => {
       try {
         setIsLoading(true);
-        const data = await api.getBookings(user.id);
+        const token = tokenStorage.getToken();
+        const data = await api.getBookings(user.id, token || undefined);
         // Sort bookings by date descending
         data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setBookings(data);
@@ -80,7 +98,21 @@ export default function DashboardPage() {
         setIsLoading(false);
       }
     };
+
     loadBookings();
+
+    // Auto refresh when status changes in another tab/window
+    const handleStorageChange = () => {
+      loadBookings();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("focus", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("focus", handleStorageChange);
+    };
   }, [router]);
 
   const handleLogout = () => {
@@ -462,7 +494,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Right Column: Forest Permits Tip Card */}
+          {/* Right Column: Forest Permits Tip Card & Password Security */}
           <div className="lg:col-span-1 space-y-6">
             <div className="rounded-[2rem] border border-amber-100 bg-amber-50/30 p-6 dark:border-neutral-800 dark:bg-neutral-900/30 space-y-4">
               <div className="flex items-center gap-2 text-amber-800 dark:text-amber-400">
@@ -473,10 +505,36 @@ export default function DashboardPage() {
                 Valley of Flowers is a protected UNESCO World Heritage Site managed by the Uttarakhand Forest Department. 
               </p>
               <ul className="text-[10px] text-neutral-500 dark:text-neutral-400 space-y-2 list-disc pl-4">
-                <li>Emergency contact information is **mandatory** for generating high-altitude entry permits.</li>
+                <li>Emergency contact information is mandatory for generating high-altitude entry permits.</li>
                 <li>A valid Government-issued ID must match your profile credentials during physical checks at the Ghangaria forest gate.</li>
                 <li>Any mismatch can lead to temporary holds or cancellation of camp permissions.</li>
               </ul>
+            </div>
+
+            {/* Password Change Card */}
+            <div className="rounded-[2rem] border border-neutral-100 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 space-y-4">
+              <div className="flex items-center gap-2 text-neutral-800 dark:text-white">
+                <Settings className="size-4 text-emerald-600" />
+                <h3 className="text-sm font-bold">Account Security</h3>
+              </div>
+              <p className="text-[11px] text-neutral-400">
+                Request an OTP sent to your registered email to change your account password.
+              </p>
+              <Button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await api.requestPasswordChangeOtp();
+                    alert("OTP sent to your email address!");
+                  } catch (err: any) {
+                    alert(err.message || "Failed to send password change OTP.");
+                  }
+                }}
+                variant="outline"
+                className="w-full rounded-xl text-xs font-bold border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50"
+              >
+                Request Password Change OTP
+              </Button>
             </div>
           </div>
         </div>

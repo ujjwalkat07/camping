@@ -44,25 +44,38 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
   const [isLoadingPackages, setIsLoadingPackages] = useState(packages.length === 0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Sync auth user state
+  // Sync auth user state — re-check on mount, storage events, and page focus
   useEffect(() => {
-    const user = api.getCurrentUser();
-    setCurrentUser(user);
-    if (user) {
-      setFormData(prev => ({
-        ...prev,
-        fullName: user.name,
-        email: user.email
-      }));
-      // Pre-fill lead traveler name
-      setTravelers(prev => {
-        const copy = [...prev];
-        if (copy[0]) {
-          copy[0].fullName = user.name;
-        }
-        return copy;
-      });
-    }
+    const syncUser = () => {
+      const user = api.getCurrentUser();
+      setCurrentUser(user);
+      if (user) {
+        setFormData(prev => ({
+          ...prev,
+          fullName: prev.fullName || user.name,
+          email: prev.email || user.email
+        }));
+        setTravelers(prev => {
+          const copy = [...prev];
+          if (copy[0] && !copy[0].fullName) {
+            copy[0].fullName = user.name;
+          }
+          return copy;
+        });
+      }
+    };
+
+    syncUser();
+
+    // Re-check when storage changes (login/logout from another component)
+    window.addEventListener("storage", syncUser);
+    // Re-check when tab regains focus (returning from login page)
+    window.addEventListener("focus", syncUser);
+
+    return () => {
+      window.removeEventListener("storage", syncUser);
+      window.removeEventListener("focus", syncUser);
+    };
   }, []);
 
   const paramPackageId = searchParams ? searchParams.get("packageId") || "" : "";
@@ -208,9 +221,31 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
     }
   };
 
+  // Restore draft booking from sessionStorage if returning after login
+  useEffect(() => {
+    try {
+      const draft = sessionStorage.getItem("draft_booking");
+      if (draft) {
+        const parsed = JSON.parse(draft);
+        if (parsed.formData) {
+          setFormData((prev) => ({
+            ...prev,
+            ...parsed.formData,
+            fullName: currentUser ? currentUser.name : parsed.formData.fullName,
+            email: currentUser ? currentUser.email : parsed.formData.email
+          }));
+        }
+        if (parsed.travelers && Array.isArray(parsed.travelers)) {
+          setTravelers(parsed.travelers);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to restore draft booking:", e);
+    }
+  }, [currentUser]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser) return;
     if (!validate()) {
       // Scroll to first error
       const firstErrorKey = Object.keys(errors)[0];
@@ -221,8 +256,17 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
       return;
     }
 
+    if (!currentUser) {
+      // Save draft booking selection and redirect to login
+      sessionStorage.setItem("draft_booking", JSON.stringify({ formData, travelers }));
+      const redirectUrl = `/login?redirect=${encodeURIComponent(`/booking${formData.packageId ? `?packageId=${formData.packageId}` : ""}`)}`;
+      router.push(redirectUrl);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      sessionStorage.removeItem("draft_booking");
       const selectedPkg = packages.find(p => p.id === formData.packageId);
       const submission: BookingSubmission = {
         userId: currentUser.id,
@@ -242,34 +286,13 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
       
       // Redirect to final verification / payment page
       router.push(`/payment?bookingId=${response.bookingId}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Booking submission failed. Please try again.");
+      alert(err.message || "Booking submission failed. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  // If user is not authenticated, show a login gate
-  if (!currentUser) {
-    const loginRedirectPath = `/login?redirect=/booking${formData.packageId ? `?packageId=${formData.packageId}` : ""}`;
-    return (
-      <div className="flex flex-col items-center justify-center rounded-[2rem] border border-neutral-100 bg-white p-8 text-center shadow-md dark:border-neutral-800 dark:bg-neutral-900/50 max-w-lg mx-auto my-6 animate-in fade-in duration-300">
-        <div className="flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-4 dark:bg-emerald-950/50 dark:text-emerald-400">
-          <BadgeInfo className="size-8" />
-        </div>
-        <h3 className="text-xl font-bold text-neutral-800 dark:text-white mb-2">Authentication Required</h3>
-        <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-sm leading-relaxed mb-6">
-          To secure permits and arrange base campsite accommodations, you must be logged into your account.
-        </p>
-        <Button asChild className="rounded-xl px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
-          <Link href={loginRedirectPath} className="flex items-center gap-1.5">
-            <LogIn className="size-4" /> Sign In / Sign Up
-          </Link>
-        </Button>
-      </div>
-    );
-  }
 
   if (isLoadingPackages) {
     return (
@@ -286,6 +309,24 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8 rounded-[2rem] border border-neutral-100 bg-white p-6 shadow-md dark:border-neutral-800 dark:bg-neutral-900 md:p-8">
+      
+      {/* Guest Notice Banner */}
+      {!currentUser && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/30 dark:bg-amber-950/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5 text-amber-800 dark:text-amber-300">
+            <BadgeInfo className="size-5 shrink-0 text-amber-600" />
+            <span>Fill out your guest details below. You will be prompted to log in or create an account when continuing to payment.</span>
+          </div>
+          <div className="flex gap-2 shrink-0 w-full sm:w-auto">
+            <Button asChild size="sm" variant="outline" className="rounded-xl border-amber-300 text-amber-900 hover:bg-amber-100 text-xs font-bold h-8">
+              <Link href={`/login?redirect=${encodeURIComponent(`/booking${formData.packageId ? `?packageId=${formData.packageId}` : ""}`)}`}>Sign In</Link>
+            </Button>
+            <Button asChild size="sm" className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold h-8">
+              <Link href={`/signup?redirect=${encodeURIComponent(`/booking${formData.packageId ? `?packageId=${formData.packageId}` : ""}`)}`}>Register</Link>
+            </Button>
+          </div>
+        </div>
+      )}
       
       {/* 1. General Booking & Contact Metadata */}
       <div>
