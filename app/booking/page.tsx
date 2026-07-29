@@ -6,17 +6,14 @@ import { BookingSteps } from "@/components/BookingSteps";
 
 export default function BookingPage() {
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 md:px-8 space-y-8">
+    <div className="mx-auto max-w-7xl px-4 py-8 md:px-8 space-y-8">
       
-      {/* Step Indicator */}
-      <BookingSteps currentStep={1} />
-
       {/* Header */}
       <div className="text-center max-w-xl mx-auto">
-        <span className="text-xs font-extrabold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider block mb-1">Campsite Booking</span>
-        <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white md:text-4xl">Secure Your Campsite</h1>
+        <span className="text-xs font-extrabold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider block mb-1">Valley Campsite Checkout</span>
+        <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white md:text-4xl">Complete Your Booking</h1>
         <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2 leading-relaxed">
-          Please fill out traveler details accurately. A Booking ID will be generated to submit the UPI payment verification.
+          Fill traveler details and choose your preferred payment option (UPI QR or Pay on Spot).
         </p>
       </div>
 

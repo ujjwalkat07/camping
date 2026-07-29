@@ -60,13 +60,13 @@ export default function SuccessPage() {
       {/* Action buttons */}
       <div className="flex flex-col sm:flex-row justify-center gap-3">
         <Button asChild size="lg" className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
-          <Link href="/" className="flex items-center gap-1">
-            Back to Home <ArrowRight className="size-4" />
+          <Link href="/dashboard" className="flex items-center gap-1">
+            Go to My Dashboard <ArrowRight className="size-4" />
           </Link>
         </Button>
         <Button asChild size="lg" variant="outline" className="rounded-xl border-neutral-200 dark:border-neutral-800">
-          <Link href="/faq">
-            Read Trek FAQs
+          <Link href="/">
+            Back to Home
           </Link>
         </Button>
       </div>

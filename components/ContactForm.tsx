@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "./LoadingSpinner";
-import { Send, CheckCircle2 } from "lucide-react";
+import { Send, CheckCircle2, AlertCircle } from "lucide-react";
 
 export function ContactForm() {
   const [formData, setFormData] = useState({
@@ -19,6 +19,8 @@ export function ContactForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [serverMessage, setServerMessage] = useState("");
 
   const validate = () => {
     const tempErrors: Record<string, string> = {};
@@ -45,7 +47,7 @@ export function ContactForm() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error on type
+    if (submitError) setSubmitError("");
     if (errors[name]) {
       setErrors((prev) => {
         const copy = { ...prev };
@@ -57,18 +59,22 @@ export function ContactForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError("");
     if (!validate()) return;
 
     setIsLoading(true);
     try {
-      const success = await api.submitContact(formData);
-      if (success) {
+      const res = await api.submitContact(formData);
+      if (res.success) {
         setIsSuccess(true);
+        setServerMessage(res.message || "Thank you for reaching out. Our support team will get back to you shortly.");
         setFormData({ name: "", email: "", phone: "", message: "" });
+      } else {
+        setSubmitError(res.message || "Failed to send message. Please try again.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Submission failed. Please try again.");
+      setSubmitError(error.message || "Submission failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -82,7 +88,7 @@ export function ContactForm() {
         </div>
         <h3 className="text-xl font-bold text-neutral-800 dark:text-white mb-2">Message Sent Successfully!</h3>
         <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-sm leading-relaxed mb-6">
-          Thank you for reaching out. Our support team will get back to you within 24 business hours.
+          {serverMessage}
         </p>
         <Button onClick={() => setIsSuccess(false)} variant="outline" className="rounded-xl px-5">
           Send another message
@@ -93,6 +99,13 @@ export function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 rounded-[2rem] border border-neutral-100 bg-white p-6 shadow-md dark:border-neutral-800 dark:bg-neutral-900 md:p-8">
+      
+      {submitError && (
+        <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-3.5 flex items-start gap-2.5 text-xs animate-in fade-in duration-200">
+          <AlertCircle className="size-4 shrink-0 text-destructive mt-0.5" />
+          <span className="text-destructive font-medium">{submitError}</span>
+        </div>
+      )}
       
       {/* Name Input */}
       <div className="space-y-1.5">

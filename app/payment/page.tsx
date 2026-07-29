@@ -10,6 +10,7 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { Copy, Check, Upload, ShieldCheck, ArrowLeft, Users, Calendar, Mail, Phone, Eye } from "lucide-react";
 import Link from "next/link";
 import { BookingSteps } from "@/components/BookingSteps";
+import { uploadPaymentScreenshot } from "@/lib/supabase";
 
 function PaymentContent() {
   const searchParams = useSearchParams();
@@ -35,7 +36,7 @@ function PaymentContent() {
   useEffect(() => {
     const user = api.getCurrentUser();
     if (!user) {
-      router.push(`/login?redirect=/payment?bookingId=${bookingId}`);
+      router.push(`/login?redirect=${encodeURIComponent(`/payment?bookingId=${bookingId}`)}`);
       return;
     }
     setCurrentUser(user);
@@ -94,10 +95,31 @@ function PaymentContent() {
     setError("");
 
     try {
-      const success = await api.submitPaymentProof(bookingId, utrNumber, screenshotName || "payment_proof.png");
+      let uploadedUrl = "";
+      if (screenshot) {
+        const uploadResult = await uploadPaymentScreenshot(screenshot, bookingId);
+        if (uploadResult.publicUrl) {
+          uploadedUrl = uploadResult.publicUrl;
+        } else if (uploadResult.error) {
+          console.warn("Supabase upload warning:", uploadResult.error);
+          // Bug #7 fix: Show meaningful error when screenshot upload fails
+          setError(`Screenshot upload failed: ${uploadResult.error}. Your booking will be submitted without the screenshot image.`);
+        }
+      }
+
+      const token = tokenStorage.getToken() || undefined;
+      const success = await api.submitPaymentProof(
+        bookingId,
+        utrNumber,
+        screenshotName || "payment_proof.png",
+        booking?.totalAmount || 0,
+        screenshot || undefined,
+        token,
+        uploadedUrl
+      );
       if (success) {
-        // Redirect to Dashboard as requested (showing status: pending)
-        router.push("/dashboard");
+        // Redirect to Success page (Bug #8 fix)
+        router.push(`/success?bookingId=${bookingId}`);
       } else {
         setError("Failed to register payment proof. Please verify the Booking ID.");
       }
@@ -139,10 +161,17 @@ function PaymentContent() {
       {/* Step Indicator */}
       <BookingSteps currentStep={2} />
 
-      {/* Back to Booking */}
-      <Link href="/booking" className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500 hover:text-emerald-600 transition-colors">
+      {/* Back to Booking - Bug #5 fix: Warn user that editing creates a new booking */}
+      <button
+        onClick={() => {
+          if (window.confirm('Going back will take you to a blank booking form. Your current booking (ID: ' + booking.bookingId + ') will remain saved. Do you want to continue?')) {
+            router.push('/booking');
+          }
+        }}
+        className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500 hover:text-emerald-600 transition-colors"
+      >
         <ArrowLeft className="size-4" /> Edit Booking Details
-      </Link>
+      </button>
 
       {/* Header */}
       <div className="text-center max-w-xl mx-auto">
@@ -246,17 +275,18 @@ function PaymentContent() {
               <span className="text-sm font-extrabold text-neutral-800 dark:text-emerald-500 font-mono">{booking.bookingId}</span>
             </div>
 
-            {/* SVG QR Code */}
-            <div className="relative rounded-2xl bg-neutral-50 p-4 border border-neutral-100 dark:bg-neutral-950 dark:border-neutral-800 flex items-center justify-center size-44 shadow-inner">
-              <svg viewBox="0 0 100 100" className="size-36 text-neutral-800 dark:text-white" fill="currentColor">
-                <path d="M5,5 h30 v30 h-30 z M10,10 h20 v20 h-20 z M15,15 h10 v10 h-10 z" />
-                <path d="M65,5 h30 v30 h-30 z M70,10 h20 v20 h-20 z M75,15 h10 v10 h-10 z" />
-                <path d="M5,65 h30 v30 h-30 z M10,70 h20 v20 h-20 z M15,75 h10 v10 h-10 z" />
-                <path d="M45,10 h10 v10 h-10 z M45,25 h10 v10 h-10 z M50,45 h10 v10 h-10 z M65,45 h10 v10 h-10 z M75,45 h20 v10 h-20 z" />
-                <path d="M45,65 h10 v20 h-10 z M55,75 h10 v10 h-10 z M65,65 h20 v10 h-20 z M80,80 h10 v10 h-10 z M65,85 h10 v10 h-10 z" />
-                <rect x="42" y="42" width="16" height="16" rx="4" fill="#0f9d58" />
-                <circle cx="50" cy="50" r="4" fill="white" />
-              </svg>
+            {/* Real Scannable UPI QR Code (Bug #12 fix) */}
+            <div className="relative rounded-2xl bg-white p-3 border border-neutral-100 dark:bg-white dark:border-neutral-800 flex flex-col items-center justify-center size-48 shadow-md group">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                  `upi://pay?pa=${upiId}&pn=CampLife%20Adventures&am=${booking.totalAmount}&tr=${booking.bookingId}&tn=Booking%20${booking.bookingId}&cu=INR`
+                )}`}
+                alt="Scan to pay via UPI"
+                className="size-40 object-contain rounded-lg"
+              />
+              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full mt-1">
+                Scan with any UPI App
+              </span>
             </div>
 
             {/* UPI Copy */}

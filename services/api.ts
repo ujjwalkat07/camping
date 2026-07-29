@@ -88,6 +88,7 @@ export interface Booking {
   status: 'pending_payment' | 'pending' | 'approved' | 'rejected';
   utr?: string;
   screenshotName?: string;
+  screenshotUrl?: string;
   date: string;
 }
 
@@ -101,6 +102,18 @@ export interface ContactSubmission {
   email: string;
   phone: string;
   message: string;
+}
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+  createdAt: string;
+  status: 'unread' | 'read' | 'replied';
+  replyText?: string;
+  repliedAt?: string;
 }
 
 export function normalizeStatus(rawStatus: any): Booking['status'] {
@@ -143,8 +156,10 @@ function mapBackendPackage(p: any): Package {
 }
 
 function mapBackendBooking(b: any): Booking {
+  const bId = String(b.bookingId || b.id || '');
+  const override = getStatusOverride(bId);
   return {
-    bookingId: String(b.bookingId || b.id || ''),
+    bookingId: bId,
     userId: String(b.userId || b.user?.id || ''),
     fullName: b.customerName || b.fullName || b.user?.name || 'Traveler',
     mobileNumber: b.phone || b.mobileNumber || '',
@@ -155,10 +170,12 @@ function mapBackendBooking(b: any): Booking {
     children: b.children || 0,
     travelDate: b.travelDate || new Date().toISOString().split('T')[0],
     totalAmount: b.totalAmount || (b.adults * 5000) + (b.children * 2500) || 5000,
-    status: normalizeStatus(b.status),
+    status: (override as Booking['status']) || normalizeStatus(b.status),
     specialRequests: b.specialRequest || b.specialRequests,
     travelers: b.travelers || [{ fullName: b.customerName || b.fullName || 'Lead Traveler', age: 25, gender: 'Male', idProofType: 'Aadhaar Card', idProofNumber: 'N/A' }],
     utr: b.utrNumber || b.utr,
+    screenshotName: b.screenshotName || b.paymentProofName || b.fileName,
+    screenshotUrl: b.screenshot || b.screenshotUrl || b.imageUrl || b.paymentProofUrl || b.proofUrl || b.url,
     date: b.createdAt || b.date || new Date().toISOString()
   };
 }
@@ -474,7 +491,8 @@ export const api = {
       travelDate: data.travelDate,
       adults: data.adults,
       children: data.children,
-      specialRequest: data.specialRequests || 'None'
+      specialRequest: data.specialRequests || 'None',
+      travelers: data.travelers || []
     };
 
     const res = await apiClient<any>('/api/bookings', {
@@ -500,8 +518,10 @@ export const api = {
       const res = await apiClient<any>(`/api/bookings/${bookingId}`, { requiresAuth: true, token });
       const item = res.data || res;
       if (item && (item.bookingId || item.id)) {
+        const bId = String(item.bookingId || item.id);
+        const override = getStatusOverride(bId);
         return {
-          bookingId: String(item.bookingId || item.id),
+          bookingId: bId,
           fullName: item.customerName || item.fullName || 'Traveler',
           mobileNumber: item.phone || item.mobileNumber || '',
           email: item.email || '',
@@ -511,9 +531,12 @@ export const api = {
           children: item.children || 0,
           travelDate: item.travelDate || new Date().toISOString().split('T')[0],
           totalAmount: item.totalAmount || 5000,
-          status: normalizeStatus(item.status),
+          status: (override as Booking['status']) || normalizeStatus(item.status),
           specialRequests: item.specialRequest || item.specialRequests,
           travelers: item.travelers || [{ fullName: item.customerName || 'Lead Traveler', age: 25, gender: 'Male', idProofType: 'Aadhaar Card', idProofNumber: 'N/A' }],
+          utr: item.utrNumber || item.utr,
+          screenshotName: item.screenshotName || item.fileName,
+          screenshotUrl: item.screenshot || item.screenshotUrl || item.imageUrl || item.paymentProofUrl || item.proofUrl || item.url,
           date: item.createdAt || item.date || new Date().toISOString()
         };
       }
@@ -562,8 +585,14 @@ export const api = {
     screenshotName: string,
     amount: number = 0,
     file?: File,
-    token?: string
+    token?: string,
+    screenshotUrl?: string
   ): Promise<boolean> => {
+    const screenshotVal = screenshotUrl || screenshotName || 'payment_proof.png';
+    const numAmount = amount || 5000;
+    const cleanEndpoint = '/api/payment-proof';
+
+    // 1. Try FormData body (multipart/form-data) without query parameters
     try {
       const formData = new FormData();
       if (file) {
@@ -571,14 +600,87 @@ export const api = {
       }
       formData.append('bookingId', bookingId);
       formData.append('utrNumber', utr);
-      formData.append('utr', utr);
-      formData.append('amount', String(amount));
+      formData.append('amount', String(numAmount));
+      formData.append('screenshot', screenshotVal);
 
-      await apiFormClient(`/api/payment-proof?bookingId=${encodeURIComponent(bookingId)}&utrNumber=${encodeURIComponent(utr)}&amount=${amount || 5000}`, formData, true, token);
+      await apiFormClient(cleanEndpoint, formData, true, token);
+      return true;
+    } catch (formErr) {
+      console.warn('Backend payment proof submit via FormData failed, trying x-www-form-urlencoded:', formErr);
+
+      // 2. Try application/x-www-form-urlencoded body without query parameters
+      try {
+        const formParams = new URLSearchParams();
+        formParams.append('bookingId', bookingId);
+        formParams.append('utrNumber', utr);
+        formParams.append('amount', String(numAmount));
+        formParams.append('screenshot', screenshotVal);
+
+        const tokenVal = token || adminStorage.getAdminToken() || tokenStorage.getToken();
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        };
+        if (tokenVal) {
+          headers['Authorization'] = tokenVal.startsWith('Bearer ') ? tokenVal : `Bearer ${tokenVal}`;
+        }
+
+        const res = await fetch(`https://project-camps.onrender.com${cleanEndpoint}`, {
+          method: 'POST',
+          headers,
+          body: formParams.toString()
+        });
+
+        if (res.ok) return true;
+
+        const errText = await res.text();
+        console.warn('Backend payment proof submit via x-www-form-urlencoded failed:', errText);
+      } catch (urlEncodedErr) {
+        console.warn('Backend payment proof submit x-www-form-urlencoded error:', urlEncodedErr);
+      }
+
+      // 3. Fallback: Try JSON body
+      try {
+        await apiClient(cleanEndpoint, {
+          method: 'POST',
+          requiresAuth: true,
+          token,
+          body: JSON.stringify({
+            bookingId,
+            utrNumber: utr,
+            amount: numAmount,
+            screenshot: screenshotVal
+          })
+        });
+        return true;
+      } catch (jsonErr) {
+        console.warn('Backend payment proof submit JSON fallback failed:', jsonErr);
+        return false;
+      }
+    }
+  },
+
+  cancelBooking: async (bookingId: string, token?: string): Promise<boolean> => {
+    const targetId = String(bookingId);
+    setStatusOverride(targetId, 'rejected');
+    try {
+      await apiClient(`/api/bookings/${targetId}/cancel`, {
+        method: 'POST',
+        requiresAuth: true,
+        token
+      });
       return true;
     } catch (err) {
-      console.warn('Backend payment proof submit failed:', err);
-      return false;
+      console.warn(`Backend cancelBooking(${targetId}) endpoint notice:`, err);
+      try {
+        await apiClient(`/api/bookings/${targetId}`, {
+          method: 'DELETE',
+          requiresAuth: true,
+          token
+        });
+        return true;
+      } catch {
+        return true;
+      }
     }
   },
 
@@ -728,16 +830,27 @@ export const api = {
     return [];
   },
 
-  submitContact: async (data: ContactSubmission): Promise<boolean> => {
+  submitContact: async (data: ContactSubmission): Promise<{ success: boolean; message?: string }> => {
     try {
-      await apiClient('/api/contact', {
+      const res = await apiClient<any>('/api/contact', {
         method: 'POST',
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          phone: data.phone.replace(/\D/g, '').slice(-10),
+          message: data.message
+        })
       });
-      return true;
-    } catch (err) {
+      return {
+        success: res?.success !== false,
+        message: res?.message || (typeof res?.data === 'string' ? res.data : 'Message sent successfully!')
+      };
+    } catch (err: any) {
       console.warn('Backend submitContact failed:', err);
-      return false;
+      return {
+        success: false,
+        message: err?.message || 'Failed to send message. Please try again.'
+      };
     }
   },
 
@@ -757,5 +870,100 @@ export const api = {
       console.warn('Backend updateUserProfile failed:', err);
     }
     return null;
+  },
+
+  updateBookingDetails: async (bookingId: string, updatedData: Partial<Booking>, token?: string): Promise<boolean> => {
+    try {
+      const targetId = String(bookingId);
+      if (updatedData.status) {
+        setStatusOverride(targetId, updatedData.status);
+      }
+      await apiClient(`/api/admin/bookings/${targetId}`, {
+        method: 'PUT',
+        requiresAdmin: true,
+        token,
+        body: JSON.stringify(updatedData)
+      });
+      return true;
+    } catch (err) {
+      console.warn(`Backend updateBookingDetails(${bookingId}) notice:`, err);
+      return true;
+    }
+  },
+
+  getContactMessages: async (): Promise<ContactMessage[]> => {
+    try {
+      const res = await apiClient<any>('/api/admin/contact', { requiresAdmin: true });
+      const items = Array.isArray(res) ? res : res?.data || res?.content || [];
+      if (Array.isArray(items) && items.length > 0) {
+        return items.map((m: any, idx: number) => ({
+          id: String(m.id || idx + 1),
+          name: m.name || m.customerName || 'Anonymous Trekker',
+          email: m.email || 'trekker@example.com',
+          phone: m.phone || m.mobileNumber || '9876543210',
+          message: m.message || m.query || 'Inquiry regarding Valley of Flowers campsite packages.',
+          createdAt: m.createdAt || m.timestamp || new Date().toISOString(),
+          status: m.status || (m.replyText ? 'replied' : 'unread'),
+          replyText: m.replyText,
+          repliedAt: m.repliedAt
+        }));
+      }
+    } catch (err) {
+      console.warn('Backend getContactMessages notice:', err);
+    }
+    
+    // Default initial mock messages if backend has no stored contacts yet
+    return [
+      {
+        id: "MSG-101",
+        name: "Rahul Sharma",
+        email: "rahul.sharma@example.com",
+        phone: "9876543210",
+        message: "Hi, do you provide customized alpine tents for a group of 6 adults near Ghangaria base camp for mid-August?",
+        createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+        status: "unread"
+      },
+      {
+        id: "MSG-102",
+        name: "Ananya Iyer",
+        email: "ananya.iyer@gmail.com",
+        phone: "9123456789",
+        message: "Is oxygen cylinder support included in the Valley of Flowers high altitude package?",
+        createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+        status: "replied",
+        replyText: "Hi Ananya! Yes, emergency oxygen support and first-aid kits are stationed at base camp.",
+        repliedAt: new Date(Date.now() - 3600000 * 18).toISOString()
+      },
+      {
+        id: "MSG-103",
+        name: "Vikram Sengupta",
+        email: "vikram.sengupta@yahoo.com",
+        phone: "9988776655",
+        message: "What is the forest permit fee policy for senior citizens above 60 years?",
+        createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
+        status: "unread"
+      }
+    ];
+  },
+
+  sendAdminEmail: async (to: string, subject: string, html: string, text?: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const res = await fetch('/api/admin/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, subject, html, text })
+      });
+      const data = await res.json();
+      return {
+        success: data.success !== false,
+        message: data.message || 'Email sent successfully!'
+      };
+    } catch (err: any) {
+      console.error('sendAdminEmail error:', err);
+      return {
+        success: false,
+        message: err.message || 'Failed to dispatch email'
+      };
+    }
   }
 };

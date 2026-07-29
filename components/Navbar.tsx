@@ -31,13 +31,9 @@ export function Navbar() {
     window.addEventListener("storage", syncAuth);
     window.addEventListener("focus", syncAuth);
 
-    // Also poll every 2s to catch cookie changes (e.g. after redirect from login)
-    const interval = setInterval(syncAuth, 2000);
-
     return () => {
       window.removeEventListener("storage", syncAuth);
       window.removeEventListener("focus", syncAuth);
-      clearInterval(interval);
     };
   }, []);
 

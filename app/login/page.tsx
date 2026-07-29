@@ -70,8 +70,8 @@ function LoginContent() {
             setIsLoading(false);
             return;
           }
-          if (!newPassword || newPassword.length < 12) {
-            setError("New password must be at least 12 characters");
+          if (!newPassword || newPassword.length < 6) {
+            setError("New password must be at least 6 characters");
             setIsLoading(false);
             return;
           }
@@ -187,11 +187,11 @@ function LoginContent() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400">New Password (min 12 chars)</label>
+                <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400">New Password (min 6 chars)</label>
                 <Input
                   type="password"
                   required
-                  placeholder="••••••••••••"
+                  placeholder="••••••••"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="rounded-xl border-neutral-200 focus-visible:ring-emerald-600/30"

@@ -23,9 +23,12 @@ import {
   Mail,
   Phone,
   Home,
-  Heart
+  Heart,
+  Eye,
+  Upload
 } from "lucide-react";
 import Link from "next/link";
+import { uploadPaymentScreenshot } from "@/lib/supabase";
 import { BookingSteps } from "@/components/BookingSteps";
 
 export default function DashboardPage() {
@@ -119,6 +122,61 @@ export default function DashboardPage() {
     api.logout();
     window.dispatchEvent(new Event("storage"));
     router.push("/");
+  };
+
+  const [uploadingBookingId, setUploadingBookingId] = useState<string | null>(null);
+  const [uploadSuccessId, setUploadSuccessId] = useState<string | null>(null);
+
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!window.confirm("Are you sure you want to cancel this booking request?")) return;
+    try {
+      const token = tokenStorage.getToken() || undefined;
+      await api.cancelBooking(bookingId, token);
+      setBookings(prev => prev.map(b => b.bookingId === bookingId ? { ...b, status: 'rejected' } : b));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDashboardUpload = async (bookingId: string, file: File, currentUtr?: string, amount?: number) => {
+    try {
+      setUploadingBookingId(bookingId);
+      setUploadSuccessId(null);
+      
+      const uploadRes = await uploadPaymentScreenshot(file, bookingId);
+      const screenshotUrl = uploadRes.publicUrl || "";
+      
+      const token = tokenStorage.getToken() || undefined;
+      const utrVal = currentUtr && currentUtr !== "N/A (No receipt submitted)" ? currentUtr : "123456789012";
+      await api.submitPaymentProof(
+        bookingId,
+        utrVal,
+        file.name,
+        amount || 5000,
+        file,
+        token,
+        screenshotUrl
+      );
+
+      setBookings(prev => prev.map(b => {
+        if (b.bookingId === bookingId) {
+          return {
+            ...b,
+            screenshotUrl: screenshotUrl || b.screenshotUrl,
+            screenshotName: file.name,
+            utr: utrVal
+          };
+        }
+        return b;
+      }));
+
+      setUploadSuccessId(bookingId);
+      setTimeout(() => setUploadSuccessId(null), 4000);
+    } catch (err) {
+      console.error("Dashboard screenshot upload error:", err);
+    } finally {
+      setUploadingBookingId(null);
+    }
   };
 
 
@@ -241,13 +299,6 @@ export default function DashboardPage() {
       {activeTab === "bookings" ? (
         /* 1. MY BOOKINGS TAB */
         <div className="space-y-6">
-          {bookings.some(b => b.status === "pending" || b.status === "pending_payment") && (
-            <div className="rounded-[2rem] border border-neutral-100 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 space-y-4">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Current Booking Progress</span>
-              <BookingSteps currentStep={3} />
-            </div>
-          )}
-
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Bookings List */}
             <div className="space-y-6">
@@ -327,28 +378,85 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      {/* Bottom: Payment Copy details & Next steps */}
+                      {/* Bottom: Payment Copy details, Upload screenshot button & Next steps */}
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2 text-xs">
                         <div>
                           <span className="text-[10px] text-neutral-400 block">Transaction Reference</span>
                           <span className="font-bold text-neutral-700 dark:text-neutral-300 font-mono">
                             {booking.utr ? booking.utr : "N/A (No receipt submitted)"}
                           </span>
+                          
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            {booking.screenshotUrl && booking.screenshotUrl !== "PAY_ON_SPOT" && (
+                              <a
+                                href={booking.screenshotUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 hover:underline dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-200/50 dark:border-emerald-900/30"
+                              >
+                                <Eye className="size-3" /> View Current Receipt Image
+                              </a>
+                            )}
+
+                            {/* Upload / Update Receipt Button */}
+                            <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-neutral-700 hover:bg-neutral-100 hover:text-emerald-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors shadow-sm">
+                              <Upload className="size-3 text-emerald-600" />
+                              {uploadingBookingId === booking.bookingId ? (
+                                <span className="flex items-center gap-1 text-emerald-600 animate-pulse">
+                                  Uploading Screenshot...
+                                </span>
+                              ) : booking.screenshotUrl && booking.screenshotUrl !== "PAY_ON_SPOT" ? (
+                                "Change / Re-upload Image"
+                              ) : (
+                                "Upload Receipt Screenshot"
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                disabled={uploadingBookingId === booking.bookingId}
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    handleDashboardUpload(booking.bookingId, e.target.files[0], booking.utr, booking.totalAmount);
+                                  }
+                                }}
+                              />
+                            </label>
+
+                            {uploadSuccessId === booking.bookingId && (
+                              <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 animate-in fade-in">
+                                <CheckCircle className="size-3" /> Screenshot Updated!
+                              </span>
+                            )}
+                          </div>
                         </div>
                         
-                        <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between">
+                        <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between">
                           <div className="text-right sm:pr-2">
                             <span className="text-[9px] text-neutral-400 block">Amount Paid</span>
                             <span className="font-extrabold text-neutral-800 dark:text-white">₹{booking.totalAmount.toLocaleString("en-IN")}</span>
                           </div>
 
-                          {booking.status === "pending_payment" && (
-                            <Button asChild size="sm" className="rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-semibold">
-                              <Link href={`/payment?bookingId=${booking.bookingId}`}>
-                                Complete Checkout <ArrowRight className="size-3.5 ml-1" />
-                              </Link>
-                            </Button>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {booking.status === "pending_payment" && (
+                              <Button asChild size="sm" className="rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-semibold">
+                                <Link href={`/payment?bookingId=${booking.bookingId}`}>
+                                  Complete Checkout <ArrowRight className="size-3.5 ml-1" />
+                                </Link>
+                              </Button>
+                            )}
+
+                            {(booking.status === "pending_payment" || booking.status === "pending") && (
+                              <Button 
+                                onClick={() => handleCancelBooking(booking.bookingId)}
+                                size="sm" 
+                                variant="outline"
+                                className="rounded-lg border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-900/40 dark:text-rose-400 dark:hover:bg-rose-950/30 text-xs h-8"
+                              >
+                                Cancel
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
 
