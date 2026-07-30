@@ -29,7 +29,6 @@ import {
   CheckCircle2
 } from "lucide-react";
 import Link from "next/link";
-import { uploadPaymentScreenshot } from "@/lib/supabase";
 
 interface BookingFormProps {
   initialPackageId?: string;
@@ -388,14 +387,7 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
       const bookingId = bookingResponse.bookingId;
 
       // 2. Submit Payment Details (UPI proof or Pay-on-Spot marker)
-      let uploadedUrl = "";
       if (paymentMethod === "upi_qr") {
-        if (screenshot) {
-          const uploadResult = await uploadPaymentScreenshot(screenshot, bookingId);
-          if (uploadResult.publicUrl) {
-            uploadedUrl = uploadResult.publicUrl;
-          }
-        }
         const token = tokenStorage.getToken() || undefined;
         await api.submitPaymentProof(
           bookingId,
@@ -403,8 +395,7 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
           screenshotName || "payment_proof.png",
           bookingResponse.totalAmount,
           screenshot || undefined,
-          token,
-          uploadedUrl
+          token
         );
       } else {
         // Pay on Spot method
@@ -415,8 +406,7 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
           "pay_on_spot.png",
           bookingResponse.totalAmount,
           undefined,
-          token,
-          "PAY_ON_SPOT"
+          token
         );
       }
 
@@ -440,7 +430,7 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
   }
 
   const selectedPkg = packages.find(p => p.id === formData.packageId) || packages[0];
-  const packagePrice = selectedPkg ? selectedPkg.price : 5000;
+  const packagePrice = selectedPkg ? selectedPkg.price : 0;
   const adultsSubtotal = formData.adults * packagePrice;
   const childrenSubtotal = formData.children * (packagePrice * 0.5);
   const totalEstCost = adultsSubtotal + childrenSubtotal;

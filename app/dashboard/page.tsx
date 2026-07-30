@@ -6,15 +6,15 @@ import { api, Booking, User } from "@/services/api";
 import { tokenStorage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { 
-  Compass, 
-  Calendar, 
-  CreditCard, 
-  Hourglass, 
-  CheckCircle, 
-  XCircle, 
-  Users, 
-  Settings, 
+import {
+  Compass,
+  Calendar,
+  CreditCard,
+  Hourglass,
+  CheckCircle,
+  XCircle,
+  Users,
+  Settings,
   ArrowRight,
   BadgeAlert,
   LogOut,
@@ -28,7 +28,6 @@ import {
   Upload
 } from "lucide-react";
 import Link from "next/link";
-import { uploadPaymentScreenshot } from "@/lib/supabase";
 import { BookingSteps } from "@/components/BookingSteps";
 
 export default function DashboardPage() {
@@ -142,27 +141,22 @@ export default function DashboardPage() {
     try {
       setUploadingBookingId(bookingId);
       setUploadSuccessId(null);
-      
-      const uploadRes = await uploadPaymentScreenshot(file, bookingId);
-      const screenshotUrl = uploadRes.publicUrl || "";
-      
+
       const token = tokenStorage.getToken() || undefined;
       const utrVal = currentUtr && currentUtr !== "N/A (No receipt submitted)" ? currentUtr : "123456789012";
       await api.submitPaymentProof(
         bookingId,
         utrVal,
         file.name,
-        amount || 5000,
+        amount,
         file,
-        token,
-        screenshotUrl
+        token
       );
 
       setBookings(prev => prev.map(b => {
         if (b.bookingId === bookingId) {
           return {
             ...b,
-            screenshotUrl: screenshotUrl || b.screenshotUrl,
             screenshotName: file.name,
             utr: utrVal
           };
@@ -184,11 +178,11 @@ export default function DashboardPage() {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
-    
+
     setIsSavingProfile(true);
     setProfileSuccessMessage("");
     setProfileErrorMessage("");
-    
+
     try {
       const updated = await api.updateUserProfile(currentUser.id, {
         name: profileForm.name,
@@ -255,7 +249,7 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 md:px-8 space-y-8 animate-in fade-in duration-300">
-      
+
       {/* Welcome Banner */}
       <div className="rounded-[2.5rem] border border-neutral-100 bg-white p-6 md:p-8 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -276,21 +270,19 @@ export default function DashboardPage() {
       <div className="flex border-b border-neutral-100 dark:border-neutral-850 gap-6">
         <button
           onClick={() => setActiveTab("bookings")}
-          className={`flex items-center gap-2 pb-4 text-xs font-extrabold uppercase tracking-wider transition-all border-b-2 ${
-            activeTab === "bookings"
+          className={`flex items-center gap-2 pb-4 text-xs font-extrabold uppercase tracking-wider transition-all border-b-2 ${activeTab === "bookings"
               ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
               : "border-transparent text-neutral-400 hover:text-neutral-600"
-          }`}
+            }`}
         >
           <Compass className="size-4" /> My Bookings
         </button>
         <button
           onClick={() => setActiveTab("profile")}
-          className={`flex items-center gap-2 pb-4 text-xs font-extrabold uppercase tracking-wider transition-all border-b-2 ${
-            activeTab === "profile"
+          className={`flex items-center gap-2 pb-4 text-xs font-extrabold uppercase tracking-wider transition-all border-b-2 ${activeTab === "profile"
               ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
               : "border-transparent text-neutral-400 hover:text-neutral-600"
-          }`}
+            }`}
         >
           <UserIcon className="size-4" /> Profile Settings
         </button>
@@ -325,7 +317,7 @@ export default function DashboardPage() {
               ) : (
                 <div className="space-y-4">
                   {bookings.map((booking) => (
-                    <div 
+                    <div
                       key={booking.bookingId}
                       className="rounded-[2rem] border border-neutral-100 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 space-y-4 hover:shadow-md transition-shadow"
                     >
@@ -385,7 +377,7 @@ export default function DashboardPage() {
                           <span className="font-bold text-neutral-700 dark:text-neutral-300 font-mono">
                             {booking.utr ? booking.utr : "N/A (No receipt submitted)"}
                           </span>
-                          
+
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             {booking.screenshotUrl && booking.screenshotUrl !== "PAY_ON_SPOT" && (
                               <a
@@ -430,7 +422,7 @@ export default function DashboardPage() {
                             )}
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between">
                           <div className="text-right sm:pr-2">
                             <span className="text-[9px] text-neutral-400 block">Amount Paid</span>
@@ -447,9 +439,9 @@ export default function DashboardPage() {
                             )}
 
                             {(booking.status === "pending_payment" || booking.status === "pending") && (
-                              <Button 
+                              <Button
                                 onClick={() => handleCancelBooking(booking.bookingId)}
-                                size="sm" 
+                                size="sm"
                                 variant="outline"
                                 className="rounded-lg border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-900/40 dark:text-rose-400 dark:hover:bg-rose-950/30 text-xs h-8"
                               >
@@ -610,7 +602,7 @@ export default function DashboardPage() {
                 <h3 className="text-sm font-extrabold">Forest Entry Permit Rules</h3>
               </div>
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                Valley of Flowers is a protected UNESCO World Heritage Site managed by the Uttarakhand Forest Department. 
+                Valley of Flowers is a protected UNESCO World Heritage Site managed by the Uttarakhand Forest Department.
               </p>
               <ul className="text-[10px] text-neutral-500 dark:text-neutral-400 space-y-2 list-disc pl-4">
                 <li>Emergency contact information is mandatory for generating high-altitude entry permits.</li>

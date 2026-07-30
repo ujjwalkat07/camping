@@ -35,31 +35,11 @@ export function deleteCookie(name: string) {
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
 }
 
-export function setStatusOverride(bookingId: string, status: string) {
-  if (typeof document === 'undefined') return;
-  const existing = getCookie('status_overrides');
-  let overrides: Record<string, string> = {};
-  if (existing) {
-    try { overrides = JSON.parse(existing); } catch {}
-  }
-  overrides[bookingId] = status;
-  setCookie('status_overrides', JSON.stringify(overrides), 30);
-}
 
-export function getStatusOverride(bookingId: string): string | null {
-  const existing = getCookie('status_overrides');
-  if (existing) {
-    try {
-      const overrides = JSON.parse(existing);
-      return overrides[bookingId] || null;
-    } catch {}
-  }
-  return null;
-}
 
 export const tokenStorage = {
   getToken: (): string | null => {
-    return getCookie('auth_token') || getCookie('accessToken') || getCookie('access_token');
+    return getCookie('admin_token') || getCookie('auth_token') || getCookie('accessToken') || getCookie('access_token') || getCookie('token');
   },
   setToken: (token: string) => {
     setCookie('auth_token', token, 7);
@@ -192,13 +172,9 @@ const processQueue = (error: any, token: string | null = null) => {
 export async function apiClient<T = any>(endpoint: string, options: ApiOptions = {}): Promise<T> {
   const { requiresAuth = false, requiresAdmin = false, token: explicitToken, headers: customHeaders, ...restOptions } = options;
 
-  let token: string | null = explicitToken || null;
+  let token: string | null = (explicitToken && typeof explicitToken === 'string' && explicitToken.trim() !== '') ? explicitToken : null;
   if (!token) {
-    if (requiresAdmin) {
-      token = adminStorage.getAdminToken();
-    } else if (requiresAuth) {
-      token = tokenStorage.getToken() || adminStorage.getAdminToken();
-    }
+    token = adminStorage.getAdminToken() || tokenStorage.getToken();
   }
 
   const headers: Record<string, string> = {

@@ -10,7 +10,6 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { Copy, Check, Upload, ShieldCheck, ArrowLeft, Users, Calendar, Mail, Phone, Eye } from "lucide-react";
 import Link from "next/link";
 import { BookingSteps } from "@/components/BookingSteps";
-import { uploadPaymentScreenshot } from "@/lib/supabase";
 
 function PaymentContent() {
   const searchParams = useSearchParams();
@@ -95,18 +94,6 @@ function PaymentContent() {
     setError("");
 
     try {
-      let uploadedUrl = "";
-      if (screenshot) {
-        const uploadResult = await uploadPaymentScreenshot(screenshot, bookingId);
-        if (uploadResult.publicUrl) {
-          uploadedUrl = uploadResult.publicUrl;
-        } else if (uploadResult.error) {
-          console.warn("Supabase upload warning:", uploadResult.error);
-          // Bug #7 fix: Show meaningful error when screenshot upload fails
-          setError(`Screenshot upload failed: ${uploadResult.error}. Your booking will be submitted without the screenshot image.`);
-        }
-      }
-
       const token = tokenStorage.getToken() || undefined;
       const success = await api.submitPaymentProof(
         bookingId,
@@ -114,11 +101,10 @@ function PaymentContent() {
         screenshotName || "payment_proof.png",
         booking?.totalAmount || 0,
         screenshot || undefined,
-        token,
-        uploadedUrl
+        token
       );
       if (success) {
-        // Redirect to Success page (Bug #8 fix)
+        // Redirect to Success page
         router.push(`/success?bookingId=${bookingId}`);
       } else {
         setError("Failed to register payment proof. Please verify the Booking ID.");
