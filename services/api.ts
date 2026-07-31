@@ -52,8 +52,11 @@ export interface TravelerDetail {
   fullName: string;
   age: number;
   gender: string;
+  phoneNumber?: string;
+  emergencyContact?: string;
   idProofType: string;
   idProofNumber: string;
+  medicalCondition?: string;
 }
 
 export interface BookingSubmission {
@@ -67,7 +70,8 @@ export interface BookingSubmission {
   children: number;
   travelDate: string;
   specialRequests?: string;
-  travelers?: TravelerDetail[];
+  pickupPoint?: string;
+  travellers?: TravelerDetail[];
 }
 
 export interface Booking {
@@ -79,13 +83,15 @@ export interface Booking {
   email: string;
   packageId: string;
   packageName: string;
+  thumbnailImage?: string | null;
   adults: number;
   children: number;
   travelDate: string;
   specialRequests?: string;
   travelers: TravelerDetail[];
   totalAmount: number;
-  status: 'pending_payment' | 'pending' | 'approved' | 'rejected';
+  status: 'pending_payment' | 'pending' | 'approved' | 'rejected' | 'deleted' | string;
+  paymentStatus?: string;
   utr?: string;
   screenshotName?: string;
   screenshotUrl?: string;
@@ -95,6 +101,19 @@ export interface Booking {
 export interface BookingResponse {
   bookingId: string;
   totalAmount: number;
+}
+
+export interface UpdateBookingPayload {
+  customerName?: string;
+  phone?: string;
+  alternateMobileNumber?: string;
+  emergencyContact?: string;
+  age?: number;
+  gender?: string;
+  address?: string;
+  pickupPoint?: string;
+  specialRequest?: string;
+  [key: string]: any;
 }
 
 export interface PaymentDetails {
@@ -146,10 +165,13 @@ export function normalizeStatus(rawStatus: any): Booking['status'] {
   if (['rejected', 'reject', 'decline', 'declined', 'cancelled', 'canceled'].includes(s)) {
     return 'rejected';
   }
+  if (['deleted', 'delete'].includes(s)) {
+    return 'deleted';
+  }
   if (['pending_payment', 'unpaid', 'payment_pending'].includes(s)) {
     return 'pending_payment';
   }
-  return 'pending';
+  return s;
 }
 
 function mapBackendPackage(p: any): Package {
@@ -178,6 +200,7 @@ function mapBackendPackage(p: any): Package {
 
 function mapBackendBooking(b: any): Booking {
   const bId = String(b.bookingId || b.id || '');
+  const rawStatus = b.bookingStatus || b.status;
   return {
     bookingId: bId,
     userId: String(b.userId || b.user?.id || ''),
@@ -186,13 +209,16 @@ function mapBackendBooking(b: any): Booking {
     email: b.email || b.user?.email || '',
     packageId: String(b.packageId || b.package?.id || ''),
     packageName: b.packageName || b.package?.title || b.package?.name || 'Valley Camping Package',
-    adults: b.adults || 1,
-    children: b.children || 0,
+    thumbnailImage: b.thumbnailImage || b.package?.thumbnailImage || null,
+    adults: Number(b.adults ?? 1),
+    children: Number(b.children ?? 0),
     travelDate: b.travelDate || new Date().toISOString().split('T')[0],
-    totalAmount: b.totalAmount || (b.adults * 5000) + (b.children * 2500) || 5000,
-    status: normalizeStatus(b.status),
-    specialRequests: b.specialRequest || b.specialRequests,
-    travelers: b.travelers || [{ fullName: b.customerName || b.fullName || 'Lead Traveler', age: 25, gender: 'Male', idProofType: 'Aadhaar Card', idProofNumber: 'N/A' }],
+    totalAmount: Number(b.totalAmount || (b.adults * 5000) + (b.children * 2500) || 5000),
+    status: normalizeStatus(rawStatus),
+    paymentStatus: String(b.paymentStatus || 'PENDING').toUpperCase(), specialRequests: b.specialRequest || b.specialRequests,
+    travelers: Array.isArray(b.travelers) && b.travelers.length > 0
+      ? b.travelers
+      : [{ fullName: b.customerName || b.fullName || 'Lead Traveler', age: b.age || 25, gender: b.gender || 'Male', idProofType: 'Aadhaar Card', idProofNumber: 'N/A' }],
     utr: b.utrNumber || b.utr,
     screenshotName: b.screenshotName || b.paymentProofName || b.fileName,
     screenshotUrl: b.screenshot || b.screenshotUrl || b.imageUrl || b.paymentProofUrl || b.proofUrl || b.url,
@@ -520,7 +546,17 @@ export const api = {
       adults: data.adults,
       children: data.children,
       specialRequest: data.specialRequests || 'None',
-      travelers: data.travelers || []
+      pickupPoint: data.pickupPoint || 'Govindghat Bus Stand',
+      travellers: (data.travellers || []).map((t, idx) => ({
+        fullName: t.fullName || `Traveler ${idx + 1}`,
+        age: Number(t.age) || 0,
+        gender: t.gender || 'Male',
+        phoneNumber: t.phoneNumber || data.mobileNumber.replace(/\D/g, '').slice(-10),
+        emergencyContact: t.emergencyContact || 'None',
+        idProofType: t.idProofType || 'Aadhaar Card',
+        idProofNumber: t.idProofNumber || 'N/A',
+        medicalCondition: t.medicalCondition || 'None'
+      }))
     };
 
     const res = await apiClient<any>('/api/bookings', {
@@ -532,7 +568,20 @@ export const api = {
 
     const resData = res.data || res;
     const bookingId = String(resData.bookingId || resData.id || '');
-    const totalAmount = resData.totalAmount || (data.adults * 5000) + (data.children * 2500);
+    let totalAmount = Number(resData.totalAmount || resData.totalPrice || resData.amount || resData.price || 0);
+
+    if (!totalAmount && bookingId) {
+      try {
+        const bk = await api.getBookingById(bookingId, token);
+        if (bk && typeof bk.totalAmount === 'number' && bk.totalAmount > 0) {
+          totalAmount = bk.totalAmount;
+        }
+      } catch { }
+    }
+
+    if (!totalAmount) {
+      totalAmount = (data.adults * 5000) + (data.children * 2500);
+    }
 
     if (bookingId) {
       tokenStorage.saveBookingId(bookingId);
@@ -542,26 +591,41 @@ export const api = {
   },
 
   getBookingById: async (bookingId: string, token?: string): Promise<Booking | null> => {
+    const targetId = String(bookingId);
+
+    // 1. Fetch user bookings list via GET /api/bookings and filter by ID
     try {
-      const res = await apiClient<any>(`/api/bookings/${bookingId}`, { requiresAuth: true, token });
-      const item = res.data || res;
-      if (item && typeof item === 'object') {
-        const mapped = mapBackendBooking(item);
-        if (!mapped.bookingId) {
-          mapped.bookingId = String(bookingId);
+      const res = await apiClient<any>('/api/bookings', { requiresAuth: true, token });
+      const items = Array.isArray(res) ? res : res?.data || res?.content || res?.bookings || [];
+      if (Array.isArray(items)) {
+        const found = items.find((b: any) => String(b.bookingId || b.id) === targetId);
+        if (found) {
+          const mapped = mapBackendBooking(found);
+          if (!mapped.bookingId) mapped.bookingId = targetId;
+          return mapped;
         }
-        return mapped;
       }
     } catch (err) {
-      console.warn(`Backend getBookingById(${bookingId}) failed:`, err);
+      console.warn(`Fetch user bookings for getBookingById(${targetId}) notice:`, err);
     }
+
     return null;
   },
 
   getBookings: async (userId: string, token?: string): Promise<Booking[]> => {
-    const currentAdmin = adminStorage.getAdminUser();
+    // Primary User Flow: Fetch user bookings via GET /api/bookings
+    try {
+      const res = await apiClient<any>('/api/bookings', { requiresAuth: true, token });
+      const items = Array.isArray(res) ? res : res?.data || res?.content || res?.bookings || [];
+      if (Array.isArray(items) && items.length > 0) {
+        return items.map(mapBackendBooking);
+      }
+    } catch (err) {
+      console.warn('Fetch /api/bookings failed:', err);
+    }
 
-    // 1. ADMIN USER FLOW: Fetch all bookings via GET /api/admin/bookings
+    // Fallback: Admin user flow via /api/admin/bookings
+    const currentAdmin = adminStorage.getAdminUser();
     if (currentAdmin) {
       try {
         const adminRes = await apiClient<any>('/api/admin/bookings', { requiresAuth: true, token });
@@ -579,15 +643,6 @@ export const api = {
       }
     }
 
-    // 2. REGULAR USER FLOW: Fetch booking details via GET /api/bookings/{bookingId}
-    const knownIds = tokenStorage.getBookingIds();
-    if (knownIds.length > 0) {
-      const fetchedBookings = await Promise.all(
-        knownIds.map(bId => api.getBookingById(bId, token))
-      );
-      return fetchedBookings.filter((b): b is Booking => b !== null);
-    }
-
     return [];
   },
 
@@ -600,11 +655,21 @@ export const api = {
     token?: string,
     screenshotUrl?: string
   ): Promise<boolean> => {
-    const screenshotVal = screenshotUrl || screenshotName;
-    const numAmount = amount;
     const cleanEndpoint = '/api/payment-proof';
+    let targetAmount = amount;
 
-    // Prepare actual File or Blob object for the 'screenshot' multipart field
+    // Fetch exact totalAmount from the booking backend record if available
+    if (bookingId) {
+      try {
+        const bk = await api.getBookingById(bookingId, token);
+        if (bk && typeof bk.totalAmount === 'number' && bk.totalAmount > 0) {
+          targetAmount = bk.totalAmount;
+        }
+      } catch (e) {
+        console.warn('Could not fetch booking details for payment proof:', e);
+      }
+    }
+
     let fileBlob: Blob | File | undefined = file;
     if (!fileBlob) {
       fileBlob = new File(
@@ -616,72 +681,30 @@ export const api = {
 
     const filename = (file as File)?.name || screenshotName || 'payment_proof.png';
 
-    // 1. PRIMARY: FormData POST to clean endpoint POST /api/payment-proof
-    try {
+    const sendProof = async (amt: number) => {
       const formData = new FormData();
-      // Spring Boot expects 'screenshot' as MultipartFile
       formData.append('screenshot', fileBlob, filename);
       formData.append('bookingId', bookingId);
       formData.append('utrNumber', utr);
-      formData.append('amount', String(numAmount));
+      formData.append('amount', String(amt));
 
       await apiFormClient(cleanEndpoint, formData, true, token);
       return true;
+    };
+
+    try {
+      return await sendProof(targetAmount);
     } catch (formErr: any) {
-      console.warn('Backend payment proof submit via POST /api/payment-proof FormData failed:', formErr);
+      console.warn('Backend payment proof submit with targetAmount failed:', formErr);
+      if (amount > 0 && amount !== targetAmount) {
+        try {
+          return await sendProof(amount);
+        } catch (retryErr) {
+          console.warn('Fallback retry with passed amount failed:', retryErr);
+        }
+      }
+      throw formErr;
     }
-
-    
-
-    // 3. TERTIARY TRY: URL-encoded parameters with screenshot string URL
-    // try {
-    //   const formParams = new URLSearchParams();
-    //   formParams.append('bookingId', bookingId);
-    //   formParams.append('utrNumber', utr);
-    //   formParams.append('amount', String(numAmount));
-    //   formParams.append('screenshot', screenshotVal);
-
-    //   const tokenVal = token || adminStorage.getAdminToken() || tokenStorage.getToken();
-    //   const headers: Record<string, string> = {
-    //     'Content-Type': 'application/x-www-form-urlencoded'
-    //   };
-    //   if (tokenVal) {
-    //     headers['Authorization'] = tokenVal.startsWith('Bearer ') ? tokenVal : `Bearer ${tokenVal}`;
-    //   }
-
-    //   const res = await fetch(`https://project-camps.onrender.com/api/payment-proof`, {
-    //     method: 'POST',
-    //     headers,
-    //     body: formParams.toString()
-    //   });
-
-    //   if (res.ok) {
-    //     return true;
-    //   }
-    // } catch (urlErr) {
-    //   console.warn('URL-encoded payment proof submit failed:', urlErr);
-    // }
-
-    // 4. QUATERNARY TRY: JSON Body
-    // try {
-    //   await apiClient('/api/payment-proof', {
-    //     method: 'POST',
-    //     requiresAuth: true,
-    //     token,
-    //     body: JSON.stringify({
-    //       bookingId,
-    //       utrNumber: utr,
-    //       amount: numAmount,
-    //       screenshot: screenshotVal
-    //     })
-    //   });
-    //   return true;
-    // } catch (jsonErr) {
-    //   console.warn('JSON payment proof submit failed:', jsonErr);
-    // }
-
-    // If network calls fail, save locally so UI succeeds gracefully
-    return true;
   },
 
   cancelBooking: async (bookingId: string, token?: string): Promise<boolean> => {
@@ -725,7 +748,7 @@ export const api = {
   approveBooking: async (id: string | number, token?: string): Promise<boolean> => {
     const targetId = String(id);
     const authToken = (token && typeof token === 'string' && token.trim() !== '') ? token : (adminStorage.getAdminToken() || tokenStorage.getToken() || undefined);
-    
+
     // Primary: PUT /api/admin/bookings/{id}/approve
     try {
       await apiClient(`/api/admin/bookings/${targetId}/approve`, {
@@ -812,6 +835,71 @@ export const api = {
     }
   },
 
+  updatePaymentStatus: async (
+    bookingId: string | number,
+    paymentStatus: 'APPROVED' | 'REJECTED' | 'PENDING' | string,
+    token?: string
+  ): Promise<boolean> => {
+    const targetId = String(bookingId);
+    const authToken = (token && typeof token === 'string' && token.trim() !== '')
+      ? token
+      : (adminStorage.getAdminToken() || tokenStorage.getToken() || undefined);
+    const formattedStatus = paymentStatus.toUpperCase();
+
+    // Primary endpoint: PUT /api/admin/bookings/{bookingId}/payment-status
+    try {
+      await apiClient(`/api/admin/bookings/${targetId}/payment-status`, {
+        method: 'PUT',
+        requiresAdmin: true,
+        requiresAuth: true,
+        token: authToken,
+        body: JSON.stringify({
+          paymentStatus: formattedStatus,
+          status: formattedStatus
+        })
+      });
+      return true;
+    } catch (err: any) {
+      console.warn(`Backend updatePaymentStatus(${targetId}, ${formattedStatus}) primary failed:`, err);
+    }
+
+    // Query param fallback: PUT /api/admin/bookings/{bookingId}/payment-status?paymentStatus=APPROVED
+    try {
+      await apiClient(`/api/admin/bookings/${targetId}/payment-status?paymentStatus=${encodeURIComponent(formattedStatus)}`, {
+        method: 'PUT',
+        requiresAdmin: true,
+        requiresAuth: true,
+        token: authToken
+      });
+      return true;
+    } catch (err: any) {
+      console.warn(`Backend updatePaymentStatus(${targetId}, ${formattedStatus}) query fallback failed:`, err);
+    }
+
+    // Fallback: PUT /api/admin/bookings/{bookingId}/payment
+    try {
+      await apiClient(`/api/admin/bookings/${targetId}/payment`, {
+        method: 'PUT',
+        requiresAdmin: true,
+        requiresAuth: true,
+        token: authToken,
+        body: JSON.stringify({ paymentStatus: formattedStatus })
+      });
+      return true;
+    } catch (err: any) {
+      console.warn(`Backend updatePaymentStatus(${targetId}, ${formattedStatus}) /payment fallback failed:`, err);
+    }
+
+    // Fallback: approve or reject booking call
+    if (formattedStatus === 'APPROVED') {
+      return api.approveBooking(targetId, authToken);
+    } else if (formattedStatus === 'REJECTED') {
+      return api.rejectBooking(targetId, authToken);
+    }
+
+    return false;
+  },
+
   deleteBooking: async (id: string | number, token?: string): Promise<{ success: boolean; conflict?: boolean; message?: string }> => {
     const targetId = String(id);
     const authToken = (token && typeof token === 'string' && token.trim() !== '') ? token : (adminStorage.getAdminToken() || tokenStorage.getToken() || undefined);
@@ -863,16 +951,56 @@ export const api = {
     }
   },
 
-  updateBooking: async (bookingId: string, updatedFields: Partial<Booking>): Promise<boolean> => {
+  updateBooking: async (
+    bookingId: string | number,
+    data: UpdateBookingPayload | Partial<Booking> | any,
+    token?: string
+  ): Promise<boolean> => {
+    const targetId = String(bookingId);
+    const authToken = (token && typeof token === 'string' && token.trim() !== '')
+      ? token
+      : (tokenStorage.getToken() || adminStorage.getAdminToken() || undefined);
+
+    const firstTraveler = Array.isArray(data.travelers) && data.travelers.length > 0 ? data.travelers[0] : {};
+
+    const payload: UpdateBookingPayload = {
+      customerName: data.customerName || data.fullName || firstTraveler.fullName || '',
+      phone: (data.phone || data.mobileNumber || '').replace(/\D/g, '').slice(-10),
+      alternateMobileNumber: (data.alternateMobileNumber || data.phone || data.mobileNumber || '').replace(/\D/g, '').slice(-10),
+      emergencyContact: data.emergencyContact || firstTraveler.emergencyContact || 'None',
+      age: Number(data.age ?? firstTraveler.age ?? 0),
+      gender: data.gender || firstTraveler.gender || 'Male',
+      address: data.address || '',
+      pickupPoint: data.pickupPoint || 'Govindghat Bus Stand',
+      specialRequest: data.specialRequest || data.specialRequests || 'None',
+      ...data
+    };
+
+    // Primary User Endpoint: PUT /api/bookings/{bookingId}
     try {
-      await apiClient(`/api/admin/bookings/${bookingId}`, {
+      await apiClient(`/api/bookings/${targetId}`, {
         method: 'PUT',
         requiresAuth: true,
-        body: JSON.stringify(updatedFields)
+        token: authToken,
+        body: JSON.stringify(payload)
       });
       return true;
-    } catch (err) {
-      console.warn(`Backend updateBooking(${bookingId}) failed:`, err);
+    } catch (err: any) {
+      console.warn(`Backend updateBooking(${targetId}) primary PUT /api/bookings/${targetId} failed:`, err);
+    }
+
+    // Fallback Admin Endpoint: PUT /api/admin/bookings/{bookingId}
+    try {
+      await apiClient(`/api/admin/bookings/${targetId}`, {
+        method: 'PUT',
+        requiresAdmin: true,
+        requiresAuth: true,
+        token: authToken,
+        body: JSON.stringify(payload)
+      });
+      return true;
+    } catch (err: any) {
+      console.warn(`Backend updateBooking(${targetId}) fallback PUT /api/admin/bookings/${targetId} failed:`, err);
       return false;
     }
   },
@@ -947,20 +1075,12 @@ export const api = {
     return null;
   },
 
-  updateBookingDetails: async (bookingId: string, updatedData: Partial<Booking>, token?: string): Promise<boolean> => {
-    try {
-      const targetId = String(bookingId);
-      await apiClient(`/api/admin/bookings/${targetId}`, {
-        method: 'PUT',
-        requiresAdmin: true,
-        token,
-        body: JSON.stringify(updatedData)
-      });
-      return true;
-    } catch (err) {
-      console.warn(`Backend updateBookingDetails(${bookingId}) notice:`, err);
-      return true;
-    }
+  updateBookingDetails: async (
+    bookingId: string | number,
+    updatedData: UpdateBookingPayload | Partial<Booking> | any,
+    token?: string
+  ): Promise<boolean> => {
+    return api.updateBooking(bookingId, updatedData, token);
   },
 
   getContactMessages: async (): Promise<ContactMessage[]> => {
@@ -983,7 +1103,7 @@ export const api = {
     } catch (err) {
       console.warn('Backend getContactMessages notice:', err);
     }
-    
+
     // Default initial mock messages if backend has no stored contacts yet
     return [
       {

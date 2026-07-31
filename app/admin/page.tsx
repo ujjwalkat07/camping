@@ -90,6 +90,7 @@ export default function AdminPage() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedPaymentDetails, setSelectedPaymentDetails] = useState<PaymentDetails | null>(null);
   const [isLoadingPayment, setIsLoadingPayment] = useState(false);
+  const [isUpdatingPaymentStatus, setIsUpdatingPaymentStatus] = useState(false);
 
   // Email Reply Drawer State
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -135,7 +136,7 @@ export default function AdminPage() {
         const adultsCount = b.adults || (b.travelers ? b.travelers.length : 1) || 1;
         const childrenCount = b.children || 0;
         const calculatedTotal = (adultsCount * basePrice) + (childrenCount * Math.round(basePrice * 0.5));
-        
+
         return {
           ...b,
           totalAmount: (b.totalAmount && b.totalAmount >= calculatedTotal) ? b.totalAmount : calculatedTotal
@@ -165,6 +166,29 @@ export default function AdminPage() {
     ]);
     setNewTaskText("");
     setIsAddTaskOpen(false);
+  };
+
+  const handleBookingStatusDropdownChange = async (id: string, newStatus: string) => {
+    try {
+      const token = adminStorage.getAdminToken() || tokenStorage.getToken() || undefined;
+      let success = false;
+      if (newStatus === 'approved') {
+        success = await api.approveBooking(id, token);
+      } else if (newStatus === 'rejected') {
+        success = await api.rejectBooking(id, token);
+      } else {
+        success = await api.updateBookingStatus(id, 'pending', token);
+      }
+
+      if (success) {
+        setBookings(prev => prev.map(b => b.bookingId === id ? { ...b, status: newStatus as any } : b));
+      } else {
+        setErrorPopupMessage(`Failed to update status for booking #${id}.`);
+      }
+    } catch (err: any) {
+      console.error("Failed to update status via dropdown:", err);
+      setErrorPopupMessage(err?.message || `Failed to update status for booking #${id}.`);
+    }
   };
 
   const handleApproveBooking = async (id: string) => {
@@ -200,7 +224,7 @@ export default function AdminPage() {
     try {
       const token = adminStorage.getAdminToken() || tokenStorage.getToken() || undefined;
       const res = await api.deleteBooking(id, token);
-      
+
       const isSuccess = typeof res === 'boolean' ? res : res.success;
       if (isSuccess) {
         setBookings(prev => prev.filter(b => String(b.bookingId) !== String(id)));
@@ -216,7 +240,7 @@ export default function AdminPage() {
       try {
         const token = adminStorage.getAdminToken() || tokenStorage.getToken() || undefined;
         await api.rejectBooking(id, token);
-      } catch {}
+      } catch { }
       setBookings(prev => prev.filter(b => String(b.bookingId) !== String(id)));
     }
   };
@@ -229,16 +253,16 @@ export default function AdminPage() {
       const token = adminStorage.getAdminToken() || tokenStorage.getToken() || undefined;
       const details = await api.getBookingPaymentDetails(bookingId, token);
       const booking = bookings.find(b => b.bookingId === bookingId);
-      
+
       // Determine correct payment status matching approved/rejected booking state
-      let resolvedPaymentStatus = 'UNDER_VERIFICATION';
+      let resolvedPaymentStatus = 'PENDING';
       if (booking?.status === 'approved') {
         resolvedPaymentStatus = 'APPROVED';
       } else if (booking?.status === 'rejected') {
         resolvedPaymentStatus = 'REJECTED';
-      } else if (details?.paymentStatus && details.paymentStatus !== 'UNDER_VERIFICATION') {
+      } else if (details?.paymentStatus) {
         resolvedPaymentStatus = details.paymentStatus;
-      } else if (details?.status && details.status !== 'UNDER_VERIFICATION') {
+      } else if (details?.status) {
         resolvedPaymentStatus = details.status;
       }
 
@@ -278,6 +302,33 @@ export default function AdminPage() {
       console.error("Failed to fetch payment details:", err);
     } finally {
       setIsLoadingPayment(false);
+    }
+  };
+
+  const handleUpdatePaymentStatus = async (bookingId: string, status: 'PENDING' | 'VERIFIED' | 'REJECTED' | string) => {
+    setIsUpdatingPaymentStatus(true);
+    try {
+      const token = adminStorage.getAdminToken() || tokenStorage.getToken() || undefined;
+      const success = await api.updatePaymentStatus(bookingId, status, token);
+      if (success) {
+        if (selectedPaymentDetails && selectedPaymentDetails.bookingId === bookingId) {
+          setSelectedPaymentDetails(prev => prev ? {
+            ...prev,
+            paymentStatus: status,
+            message: `Payment status updated to ${status} successfully.`
+          } : null);
+        }
+
+        const mappedBookingStatus = (status === 'VERIFIED' || status === 'APPROVED') ? 'approved' : status === 'REJECTED' ? 'rejected' : 'pending';
+        setBookings(prev => prev.map(b => b.bookingId === bookingId ? { ...b, status: mappedBookingStatus, paymentStatus: status } : b));
+      } else {
+        setErrorPopupMessage(`Failed to update payment status to ${status} for booking #${bookingId}.`);
+      }
+    } catch (err: any) {
+      console.error("Failed to update payment status:", err);
+      setErrorPopupMessage(err?.message || `Failed to update payment status for booking #${bookingId}.`);
+    } finally {
+      setIsUpdatingPaymentStatus(false);
     }
   };
 
@@ -1223,6 +1274,18 @@ export default function AdminPage() {
 
                           <td className="py-3.5 px-4 text-right whitespace-nowrap">
                             <div className="inline-flex items-center justify-end gap-1.5">
+                              {/* BOOKING APPROVAL STATUS DROPDOWN */}
+                              <select
+                                value={b.status}
+                                onChange={(e) => handleBookingStatusDropdownChange(b.bookingId, e.target.value)}
+                                className="rounded-xl border border-emerald-200/80 dark:border-emerald-900/60 bg-emerald-50/60 dark:bg-emerald-950/40 px-2.5 py-1 text-[11px] font-black text-emerald-800 dark:text-emerald-300 cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs h-7"
+                                title="Approval Action Dropdown"
+                              >
+                                <option value="approved" className="bg-white text-emerald-800 dark:bg-neutral-900 font-bold">✓ Approve</option>
+                                <option value="pending" className="bg-white text-amber-800 dark:bg-neutral-900 font-bold">⏳ Pending</option>
+                                <option value="rejected" className="bg-white text-rose-800 dark:bg-neutral-900 font-bold">✕ Reject</option>
+                              </select>
+
                               <Button
                                 onClick={() => handleOpenEditModal(b)}
                                 size="sm"
@@ -1232,27 +1295,6 @@ export default function AdminPage() {
                               >
                                 <Edit className="size-3 mr-1" /> Edit
                               </Button>
-
-                              {b.status !== 'approved' && (
-                                <Button
-                                  onClick={() => handleApproveBooking(b.bookingId)}
-                                  size="sm"
-                                  className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] h-7 px-2.5 shadow-xs"
-                                >
-                                  Approve
-                                </Button>
-                              )}
-
-                              {b.status !== 'rejected' && (
-                                <Button
-                                  onClick={() => handleRejectBooking(b.bookingId)}
-                                  size="sm"
-                                  variant="outline"
-                                  className="rounded-xl text-[11px] h-7 px-2.5 font-bold text-amber-700 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-900/50 dark:hover:bg-amber-950/40"
-                                >
-                                  Reject
-                                </Button>
-                              )}
 
                               <Button
                                 onClick={() => handleOpenEmailComposer(b.email, `Booking Update — ${b.bookingId}`, `Hi ${b.fullName},\n\nYour campsite booking status is ${b.status.toUpperCase()}.\n\nTotal Amount: ₹${b.totalAmount}\n\nBest regards,\nValley Base Team`)}
@@ -1565,24 +1607,24 @@ export default function AdminPage() {
                   >
                     Cancel
                   </Button>
-                <Button
-                  type="submit"
-                  disabled={isSavingEdit}
-                  className="rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5"
-                >
-                  {isSavingEdit ? (
-                    <>
-                      <LoadingSpinner size={16} className="text-white mr-1" />
-                      Saving Edits...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="size-4" /> Save Booking Changes
-                    </>
-                  )}
-                </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSavingEdit}
+                    className="rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5"
+                  >
+                    {isSavingEdit ? (
+                      <>
+                        <LoadingSpinner size={16} className="text-white mr-1" />
+                        Saving Edits...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="size-4" /> Save Booking Changes
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
-            </div>
 
             </form>
 
@@ -1877,7 +1919,7 @@ export default function AdminPage() {
       {isPaymentModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-xl rounded-[2.5rem] bg-white p-6 md:p-8 shadow-2xl dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 space-y-6 relative max-h-[90vh] overflow-y-auto">
-            
+
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b pb-4 border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-3">
@@ -1906,7 +1948,7 @@ export default function AdminPage() {
               </div>
             ) : selectedPaymentDetails ? (
               <div className="space-y-5 text-xs">
-                
+
                 {/* System Message Banner */}
                 {selectedPaymentDetails.message && (
                   <div className="rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 p-3.5 border border-emerald-100 dark:border-emerald-900/40 text-emerald-800 dark:text-emerald-300 font-semibold flex items-center gap-2">
@@ -1926,13 +1968,12 @@ export default function AdminPage() {
 
                   <div>
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 block mb-1">Payment Status</span>
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wide ${
-                      selectedPaymentDetails.paymentStatus === 'APPROVED' || selectedPaymentDetails.paymentStatus === 'VERIFIED' || selectedPaymentDetails.paymentStatus === 'SUCCESS'
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wide ${selectedPaymentDetails.paymentStatus === 'APPROVED' || selectedPaymentDetails.paymentStatus === 'VERIFIED' || selectedPaymentDetails.paymentStatus === 'SUCCESS'
                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                         : selectedPaymentDetails.paymentStatus === 'REJECTED' || selectedPaymentDetails.paymentStatus === 'FAILED'
                           ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                           : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 animate-pulse'
-                    }`}>
+                      }`}>
                       <span className="size-2 rounded-full bg-current" />
                       {selectedPaymentDetails.paymentStatus || selectedPaymentDetails.status || 'UNDER_VERIFICATION'}
                     </span>
@@ -1950,6 +1991,62 @@ export default function AdminPage() {
                     <div className="font-mono text-xs font-extrabold text-neutral-900 dark:text-white bg-white dark:bg-neutral-900 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800">
                       <span>{selectedPaymentDetails.utrNumber || selectedPaymentDetails.utr || 'N/A'}</span>
                     </div>
+                  </div>
+                </div>
+
+                {/* Payment Status Action Control (PUT /api/admin/bookings/{bookingId}/payment-status) */}
+                <div className="p-4 rounded-2xl bg-slate-100/90 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5">
+                      <Sparkles className="size-4 text-emerald-600 shrink-0" />
+                      Update Payment Status:
+                    </span>
+                    {isUpdatingPaymentStatus && (
+                      <span className="text-[10px] font-bold text-emerald-600 animate-pulse flex items-center gap-1">
+                        <LoadingSpinner size={12} /> Saving...
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Option 0: PENDING */}
+                    <button
+                      type="button"
+                      disabled={isUpdatingPaymentStatus || selectedPaymentDetails.paymentStatus === 'PENDING'}
+                      onClick={() => handleUpdatePaymentStatus(selectedPaymentDetails.bookingId, 'PENDING')}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl font-extrabold text-[11px] transition-all shadow-xs ${selectedPaymentDetails.paymentStatus === 'PENDING'
+                          ? 'bg-amber-500 text-white ring-2 ring-amber-500 ring-offset-1 dark:ring-offset-neutral-900 cursor-default'
+                          : 'bg-white dark:bg-neutral-900 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/60 hover:bg-amber-50 dark:hover:bg-amber-950/40'
+                        }`}
+                    >
+                      <Clock className="size-3.5 shrink-0" /> PENDING
+                    </button>
+
+                    {/* Option 1: VERIFIED */}
+                    <button
+                      type="button"
+                      disabled={isUpdatingPaymentStatus || selectedPaymentDetails.paymentStatus === 'VERIFIED' || selectedPaymentDetails.paymentStatus === 'APPROVED'}
+                      onClick={() => handleUpdatePaymentStatus(selectedPaymentDetails.bookingId, 'VERIFIED')}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl font-extrabold text-[11px] transition-all shadow-xs ${selectedPaymentDetails.paymentStatus === 'VERIFIED' || selectedPaymentDetails.paymentStatus === 'APPROVED' || selectedPaymentDetails.paymentStatus === 'SUCCESS'
+                          ? 'bg-emerald-600 text-white ring-2 ring-emerald-600 ring-offset-1 dark:ring-offset-neutral-900 cursor-default'
+                          : 'bg-white dark:bg-neutral-900 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                        }`}
+                    >
+                      <CheckCircle className="size-3.5 shrink-0" /> VERIFIED
+                    </button>
+
+                    {/* Option 2: REJECTED */}
+                    <button
+                      type="button"
+                      disabled={isUpdatingPaymentStatus || selectedPaymentDetails.paymentStatus === 'REJECTED'}
+                      onClick={() => handleUpdatePaymentStatus(selectedPaymentDetails.bookingId, 'REJECTED')}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl font-extrabold text-[11px] transition-all shadow-xs ${selectedPaymentDetails.paymentStatus === 'REJECTED' || selectedPaymentDetails.paymentStatus === 'FAILED'
+                          ? 'bg-rose-600 text-white ring-2 ring-rose-600 ring-offset-1 dark:ring-offset-neutral-900 cursor-default'
+                          : 'bg-white dark:bg-neutral-900 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40'
+                        }`}
+                    >
+                      <X className="size-3.5 shrink-0" /> REJECTED
+                    </button>
                   </div>
                 </div>
 
@@ -2043,7 +2140,7 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-      
+
     </div>
   );
 }

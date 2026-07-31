@@ -58,10 +58,11 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
     children: 0,
     travelDate: "",
     specialRequests: "",
+    pickupPoint: "Govindghat Bus Stand",
   });
 
   const [travelers, setTravelers] = useState<TravelerDetail[]>([
-    { fullName: "", age: 25, gender: "Male", idProofType: "Aadhaar Card", idProofNumber: "" }
+    { fullName: "", age: 25, gender: "Male", phoneNumber: "", emergencyContact: "", idProofType: "Aadhaar Card", idProofNumber: "", medicalCondition: "" }
   ]);
 
   // Form Step 2 State: Payment Details
@@ -182,8 +183,11 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
             fullName: "",
             age: isChild ? 8 : 25,
             gender: "Male",
+            phoneNumber: "",
+            emergencyContact: "",
             idProofType: "Aadhaar Card",
-            idProofNumber: ""
+            idProofNumber: "",
+            medicalCondition: ""
           });
         }
       } else if (updated.length > totalCount) {
@@ -379,7 +383,8 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
         children: formData.children,
         travelDate: formData.travelDate,
         specialRequests: formData.specialRequests,
-        travelers: travelers
+        pickupPoint: formData.pickupPoint,
+        travellers: travelers
       };
 
       // 1. Submit Booking Record
@@ -766,6 +771,21 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
                       />
                     </div>
                   </div>
+
+                  {/* Pickup Point */}
+                  <div className="space-y-1 sm:col-span-2 lg:col-span-3">
+                    <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 flex items-center gap-1">
+                      <MapPin className="size-3.5 text-neutral-400" /> Pickup Location / Point
+                    </label>
+                    <Input
+                      type="text"
+                      name="pickupPoint"
+                      placeholder="e.g. Govindghat Bus Stand / Rishikesh Railway Station"
+                      value={formData.pickupPoint}
+                      onChange={handleFormChange}
+                      className="rounded-xl border border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -878,6 +898,42 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
                             {errors[`traveler-${index}-idproof`] && (
                               <p className="text-[9px] font-semibold text-destructive">{errors[`traveler-${index}-idproof`]}</p>
                             )}
+                          </div>
+                        </div>
+
+                        {/* Extra Traveler Details: Phone, Emergency Contact, Medical Condition */}
+                        <div className="grid gap-4 sm:grid-cols-3 pt-3 border-t border-dashed border-neutral-200 dark:border-neutral-800">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400">Phone Number</label>
+                            <Input
+                              type="tel"
+                              placeholder="Passenger phone (optional)"
+                              value={traveler.phoneNumber || ""}
+                              onChange={(e) => handleTravelerChange(index, "phoneNumber", e.target.value)}
+                              className="rounded-xl h-9 text-xs border border-neutral-200 dark:border-neutral-800"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400">Emergency Contact</label>
+                            <Input
+                              type="text"
+                              placeholder="Emergency contact info"
+                              value={traveler.emergencyContact || ""}
+                              onChange={(e) => handleTravelerChange(index, "emergencyContact", e.target.value)}
+                              className="rounded-xl h-9 text-xs border border-neutral-200 dark:border-neutral-800"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400">Medical Condition</label>
+                            <Input
+                              type="text"
+                              placeholder="Allergies / medical notes"
+                              value={traveler.medicalCondition || ""}
+                              onChange={(e) => handleTravelerChange(index, "medicalCondition", e.target.value)}
+                              className="rounded-xl h-9 text-xs border border-neutral-200 dark:border-neutral-800"
+                            />
                           </div>
                         </div>
                       </div>

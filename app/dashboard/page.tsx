@@ -25,7 +25,10 @@ import {
   Home,
   Heart,
   Eye,
-  Upload
+  Upload,
+  Edit,
+  X,
+  Save
 } from "lucide-react";
 import Link from "next/link";
 import { BookingSteps } from "@/components/BookingSteps";
@@ -50,6 +53,64 @@ export default function DashboardPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSuccessMessage, setProfileSuccessMessage] = useState("");
   const [profileErrorMessage, setProfileErrorMessage] = useState("");
+
+  // Edit Booking Modal State
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [editForm, setEditForm] = useState({
+    customerName: "",
+    phone: "",
+    alternateMobileNumber: "",
+    emergencyContact: "",
+    age: 25,
+    gender: "Male",
+    address: "",
+    pickupPoint: "Govindghat Bus Stand",
+    specialRequest: ""
+  });
+  const [isSavingBookingEdit, setIsSavingBookingEdit] = useState(false);
+  const [bookingEditMessage, setBookingEditMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handleOpenEditBooking = (b: Booking) => {
+    setEditingBooking(b);
+    const firstTraveler = b.travelers && b.travelers.length > 0 ? b.travelers[0] : ({} as any);
+    setEditForm({
+      customerName: b.fullName || firstTraveler.fullName || "",
+      phone: b.mobileNumber || "",
+      alternateMobileNumber: b.mobileNumber || "",
+      emergencyContact: firstTraveler.emergencyContact || "",
+      age: firstTraveler.age || 25,
+      gender: firstTraveler.gender || "Male",
+      address: "",
+      pickupPoint: "Govindghat Bus Stand",
+      specialRequest: b.specialRequests || ""
+    });
+    setBookingEditMessage(null);
+  };
+
+  const handleSaveBookingEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBooking) return;
+    setIsSavingBookingEdit(true);
+    setBookingEditMessage(null);
+
+    try {
+      const token = tokenStorage.getToken() || undefined;
+      const success = await api.updateBooking(editingBooking.bookingId, editForm, token);
+      if (success) {
+        setBookingEditMessage({ type: 'success', message: 'Booking details updated successfully!' });
+        const updated = await api.getBookings(currentUser?.id || '', token);
+        setBookings(updated);
+        setTimeout(() => setEditingBooking(null), 1200);
+      } else {
+        setBookingEditMessage({ type: 'error', message: 'Failed to update booking details. Please try again.' });
+      }
+    } catch (err: any) {
+      console.error(err);
+      setBookingEditMessage({ type: 'error', message: err?.message || 'An error occurred while saving.' });
+    } finally {
+      setIsSavingBookingEdit(false);
+    }
+  };
 
   // Sync auth and fetch bookings
   useEffect(() => {
@@ -209,32 +270,69 @@ export default function DashboardPage() {
   };
 
   const getStatusBadge = (status: Booking["status"]) => {
-    switch (status) {
+    const s = String(status || '').toLowerCase();
+    switch (s) {
       case "pending_payment":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-bold text-orange-600 dark:bg-orange-950/30 dark:text-orange-400">
+          <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-bold text-orange-600 dark:bg-orange-950/30 dark:text-orange-400 border border-orange-200/50">
             <CreditCard className="size-3.5" /> Pending Payment
           </span>
         );
       case "pending":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-yellow-50 px-2.5 py-0.5 text-xs font-bold text-yellow-600 dark:bg-yellow-950/30 dark:text-yellow-400">
-            <Hourglass className="size-3.5" /> Pending Owner Approval
+          <span className="inline-flex items-center gap-1 rounded-full bg-yellow-50 px-2.5 py-0.5 text-xs font-bold text-yellow-600 dark:bg-yellow-950/30 dark:text-yellow-400 border border-yellow-200/50">
+            <Hourglass className="size-3.5" /> Pending Approval
           </span>
         );
       case "approved":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400">
-            <CheckCircle className="size-3.5" /> Approved / Verified
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200/50">
+            <CheckCircle className="size-3.5" /> Approved
           </span>
         );
       case "rejected":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-bold text-rose-600 dark:bg-rose-950/30 dark:text-rose-400">
+          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-bold text-rose-600 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-200/50">
             <XCircle className="size-3.5" /> Booking Rejected
           </span>
         );
+      case "deleted":
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-bold text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 border border-neutral-300 dark:border-neutral-700">
+            <XCircle className="size-3.5" /> Booking Deleted
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-bold text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 uppercase">
+            {status}
+          </span>
+        );
     }
+  };
+
+  const getPaymentStatusBadge = (pStatus?: string) => {
+    if (!pStatus) return null;
+    const ps = pStatus.toUpperCase();
+    if (ps === 'APPROVED' || ps === 'VERIFIED' || ps === 'SUCCESS') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-black text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60">
+          <CheckCircle className="size-3 text-emerald-600" /> Payment: Approved
+        </span>
+      );
+    }
+    if (ps === 'REJECTED' || ps === 'FAILED') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-black text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/60">
+          <XCircle className="size-3 text-rose-600" /> Payment: Rejected
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-black text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200/60">
+        <Hourglass className="size-3 text-amber-600" /> Payment: {ps.replace(/_/g, ' ')}
+      </span>
+    );
   };
 
   if (isLoading) {
@@ -321,31 +419,40 @@ export default function DashboardPage() {
                       key={booking.bookingId}
                       className="rounded-[2rem] border border-neutral-100 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 space-y-4 hover:shadow-md transition-shadow"
                     >
-                      {/* Top Bar: Booking ID and Status */}
+                      {/* Top Bar: Booking ID and Status Badges */}
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b pb-3 border-neutral-100 dark:border-neutral-800">
                         <div>
-                          <span className="text-[10px] text-neutral-400 block">ID Session Reference</span>
+                          <span className="text-[10px] font-bold text-neutral-400 block uppercase tracking-wider">Booking ID</span>
                           <span className="text-xs font-extrabold text-neutral-800 dark:text-white font-mono">{booking.bookingId}</span>
                         </div>
-                        <div>{getStatusBadge(booking.status)}</div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {getStatusBadge(booking.status)}
+                          {getPaymentStatusBadge(booking.paymentStatus)}
+                        </div>
                       </div>
 
-                      {/* Body: Camp Name, Date, Guests */}
-                      <div className="grid gap-4 sm:grid-cols-3 text-xs">
-                        <div>
-                          <span className="text-[10px] text-neutral-400 block mb-0.5">Selected Package</span>
-                          <span className="font-bold text-neutral-800 dark:text-neutral-200">{booking.packageName}</span>
+                      {/* Body: Camp Name, Date, Guests, Thumbnail */}
+                      <div className="grid gap-4 sm:grid-cols-4 items-center text-xs">
+                        {booking.thumbnailImage && (
+                          <div className="sm:col-span-1 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 max-h-24 bg-neutral-950">
+                            <img src={booking.thumbnailImage} alt={booking.packageName} className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        <div className={booking.thumbnailImage ? "sm:col-span-1" : "sm:col-span-1"}>
+                          <span className="text-[10px] text-neutral-400 block mb-0.5 font-bold uppercase tracking-wider">Selected Package</span>
+                          <span className="font-extrabold text-neutral-900 dark:text-white text-sm">{booking.packageName}</span>
+                          <span className="text-[10px] text-neutral-400 block mt-0.5">Package #{booking.packageId}</span>
                         </div>
                         <div>
-                          <span className="text-[10px] text-neutral-400 block mb-0.5">Travel Date</span>
+                          <span className="text-[10px] text-neutral-400 block mb-0.5 font-bold uppercase tracking-wider">Travel Date</span>
                           <span className="font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                            <Calendar className="size-3.5 text-neutral-400" /> {booking.travelDate}
+                            <Calendar className="size-3.5 text-emerald-600" /> {booking.travelDate}
                           </span>
                         </div>
                         <div>
-                          <span className="text-[10px] text-neutral-400 block mb-0.5">Permits Allocated</span>
+                          <span className="text-[10px] text-neutral-400 block mb-0.5 font-bold uppercase tracking-wider">Permits / Guests</span>
                           <span className="font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                            <Users className="size-3.5 text-neutral-400" /> {booking.adults + booking.children} Travelers
+                            <Users className="size-3.5 text-emerald-600" /> {booking.adults} Adults, {booking.children} Children
                           </span>
                         </div>
                       </div>
@@ -389,44 +496,13 @@ export default function DashboardPage() {
                                 <Eye className="size-3" /> View Current Receipt Image
                               </a>
                             )}
-
-                            {/* Upload / Update Receipt Button */}
-                            <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-neutral-700 hover:bg-neutral-100 hover:text-emerald-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors shadow-sm">
-                              <Upload className="size-3 text-emerald-600" />
-                              {uploadingBookingId === booking.bookingId ? (
-                                <span className="flex items-center gap-1 text-emerald-600 animate-pulse">
-                                  Uploading Screenshot...
-                                </span>
-                              ) : booking.screenshotUrl && booking.screenshotUrl !== "PAY_ON_SPOT" ? (
-                                "Change / Re-upload Image"
-                              ) : (
-                                "Upload Receipt Screenshot"
-                              )}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                disabled={uploadingBookingId === booking.bookingId}
-                                onChange={(e) => {
-                                  if (e.target.files && e.target.files[0]) {
-                                    handleDashboardUpload(booking.bookingId, e.target.files[0], booking.utr, booking.totalAmount);
-                                  }
-                                }}
-                              />
-                            </label>
-
-                            {uploadSuccessId === booking.bookingId && (
-                              <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 animate-in fade-in">
-                                <CheckCircle className="size-3" /> Screenshot Updated!
-                              </span>
-                            )}
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between">
                           <div className="text-right sm:pr-2">
-                            <span className="text-[9px] text-neutral-400 block">Amount Paid</span>
-                            <span className="font-extrabold text-neutral-800 dark:text-white">₹{booking.totalAmount.toLocaleString("en-IN")}</span>
+                            <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider block">Total Amount</span>
+                            <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">₹{booking.totalAmount.toLocaleString("en-IN")}</span>
                           </div>
 
                           <div className="flex items-center gap-2">
@@ -437,6 +513,15 @@ export default function DashboardPage() {
                                 </Link>
                               </Button>
                             )}
+
+                            <Button
+                              onClick={() => handleOpenEditBooking(booking)}
+                              size="sm"
+                              variant="outline"
+                              className="rounded-lg border-neutral-200 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-300 text-xs h-8 font-semibold"
+                            >
+                              <Edit className="size-3 mr-1" /> Edit Details
+                            </Button>
 
                             {(booking.status === "pending_payment" || booking.status === "pending") && (
                               <Button
@@ -640,6 +725,192 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* EDIT BOOKING DETAILS MODAL (PUT /api/bookings/{bookingId}) */}
+      {editingBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white">
+                  Edit Booking Details
+                </h3>
+                <p className="text-xs text-neutral-400">
+                  Booking ID: #{editingBooking.bookingId}
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingBooking(null)}
+                className="rounded-full p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {bookingEditMessage && (
+              <div className={`p-3 rounded-xl text-xs font-semibold ${
+                bookingEditMessage.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300'
+                  : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300'
+              }`}>
+                {bookingEditMessage.message}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveBookingEdit} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
+                    Customer Name:
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.customerName}
+                    onChange={(e) => setEditForm({ ...editForm, customerName: e.target.value })}
+                    className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 p-2.5 text-neutral-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
+                    Phone Number:
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 p-2.5 text-neutral-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
+                    Alternate Mobile Number:
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.alternateMobileNumber}
+                    onChange={(e) => setEditForm({ ...editForm, alternateMobileNumber: e.target.value })}
+                    className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 p-2.5 text-neutral-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
+                    Emergency Contact:
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.emergencyContact}
+                    onChange={(e) => setEditForm({ ...editForm, emergencyContact: e.target.value })}
+                    className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 p-2.5 text-neutral-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
+                    Age:
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={120}
+                    value={editForm.age}
+                    onChange={(e) => setEditForm({ ...editForm, age: Number(e.target.value) })}
+                    className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 p-2.5 text-neutral-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
+                    Gender:
+                  </label>
+                  <select
+                    value={editForm.gender}
+                    onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+                    className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 p-2.5 text-neutral-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
+                  Address:
+                </label>
+                <input
+                  type="text"
+                  value={editForm.address}
+                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                  placeholder="Full Residential Address"
+                  className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 p-2.5 text-neutral-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
+                    Pickup Point:
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.pickupPoint}
+                    onChange={(e) => setEditForm({ ...editForm, pickupPoint: e.target.value })}
+                    className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 p-2.5 text-neutral-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
+                    Special Request:
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.specialRequest}
+                    onChange={(e) => setEditForm({ ...editForm, specialRequest: e.target.value })}
+                    placeholder="Dietary, tent preferences, etc."
+                    className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 p-2.5 text-neutral-900 dark:text-white font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditingBooking(null)}
+                  className="rounded-xl text-xs font-semibold h-10 px-4"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSavingBookingEdit}
+                  className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold h-10 px-5 shadow-sm"
+                >
+                  {isSavingBookingEdit ? (
+                    <span className="flex items-center gap-1.5 animate-pulse">
+                      <LoadingSpinner size={14} /> Saving Changes...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5">
+                      <Save className="size-3.5" /> Save Changes
+                    </span>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

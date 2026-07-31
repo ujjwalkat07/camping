@@ -311,7 +311,7 @@ export async function apiFormClient<T = any>(endpoint: string, formData: FormDat
     data = text;
   }
 
-  if (!response.ok) {
+  if (!response.ok || (data && typeof data === 'object' && data.success === false)) {
     const errorMessage = data?.message || data?.error || response.statusText || 'Upload failed';
     throw new Error(errorMessage);
   }
