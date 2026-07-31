@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { api, Booking, User } from "@/services/api";
+import { api, Booking, User, Package } from "@/services/api";
 import { tokenStorage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
@@ -28,7 +28,8 @@ import {
   Upload,
   Edit,
   X,
-  Save
+  Save,
+  Sparkles
 } from "lucide-react";
 import Link from "next/link";
 import { BookingSteps } from "@/components/BookingSteps";
@@ -38,6 +39,7 @@ export default function DashboardPage() {
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [allPackages, setAllPackages] = useState<Package[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Profile Settings Form State
@@ -142,6 +144,14 @@ export default function DashboardPage() {
         setIsLoading(true);
         const token = tokenStorage.getToken();
         const data = await api.getBookings(user.id, token || undefined);
+        // Fetch campsite packages for sidebar display
+        try {
+          const pkgs = await api.getPackages();
+          setAllPackages(pkgs);
+        } catch (e) {
+          console.warn("Failed to load sidebar packages:", e);
+        }
+
         // Sort bookings by date descending
         data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setBookings(data);
@@ -349,9 +359,9 @@ export default function DashboardPage() {
     <div className="mx-auto max-w-7xl px-4 py-8 md:px-8 space-y-8 animate-in fade-in duration-300">
 
       {/* Welcome Banner */}
-      <div className="rounded-[2.5rem] border border-neutral-100 bg-white p-6 md:p-8 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="rounded-[2.5rem] border border-neutral-200/80 bg-white p-6 md:p-8 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <span className="text-xs font-extrabold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">Traveler Space</span>
+          <span className="text-xs font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-widest block">TRAVELER SPACE</span>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white mt-1">
             Namaste, {currentUser.name}
           </h1>
@@ -359,187 +369,224 @@ export default function DashboardPage() {
             Manage your campsite permits, verify traveler details, and track owner approvals.
           </p>
         </div>
-        <Button onClick={handleLogout} variant="outline" className="rounded-xl border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900 flex items-center gap-1.5 self-stretch md:self-auto justify-center h-10">
+        <Button onClick={handleLogout} variant="outline" className="rounded-xl border border-neutral-200 text-neutral-700 hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900 flex items-center gap-2 self-stretch md:self-auto justify-center h-10 font-bold text-xs">
           <LogOut className="size-4" /> Log Out
         </Button>
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-neutral-100 dark:border-neutral-850 gap-6">
+      <div className="flex border-b border-neutral-100 dark:border-neutral-800 gap-8">
         <button
           onClick={() => setActiveTab("bookings")}
-          className={`flex items-center gap-2 pb-4 text-xs font-extrabold uppercase tracking-wider transition-all border-b-2 ${activeTab === "bookings"
+          className={`flex items-center gap-2 pb-3.5 text-xs font-black uppercase tracking-wider transition-all border-b-2 ${
+            activeTab === "bookings"
               ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
               : "border-transparent text-neutral-400 hover:text-neutral-600"
-            }`}
+          }`}
         >
-          <Compass className="size-4" /> My Bookings
+          <Compass className="size-4" /> MY BOOKINGS
         </button>
         <button
           onClick={() => setActiveTab("profile")}
-          className={`flex items-center gap-2 pb-4 text-xs font-extrabold uppercase tracking-wider transition-all border-b-2 ${activeTab === "profile"
+          className={`flex items-center gap-2 pb-3.5 text-xs font-black uppercase tracking-wider transition-all border-b-2 ${
+            activeTab === "profile"
               ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
               : "border-transparent text-neutral-400 hover:text-neutral-600"
-            }`}
+          }`}
         >
-          <UserIcon className="size-4" /> Profile Settings
+          <UserIcon className="size-4" /> PROFILE SETTINGS
         </button>
       </div>
 
       {activeTab === "bookings" ? (
-        /* 1. MY BOOKINGS TAB */
-        <div className="space-y-6">
-          <div className="max-w-4xl mx-auto space-y-6">
-            {/* Bookings List */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-neutral-800 dark:text-white flex items-center gap-2">
-                  <Compass className="size-5 text-emerald-600" /> Active Campsite Bookings
-                </h2>
-                <span className="text-xs font-semibold text-neutral-400">Total requests: {bookings.length}</span>
+        /* 1. MY BOOKINGS TAB WITH FEATURED PACKAGES SIDEBAR */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Active Campsite Bookings */}
+          <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2 tracking-tight">
+                <Compass className="size-5 text-emerald-600" /> Active Campsite Bookings
+              </h2>
+              <span className="text-xs font-semibold text-neutral-400">Total requests: {bookings.length}</span>
+            </div>
+
+            {bookings.length === 0 ? (
+              <div className="rounded-[2.5rem] border border-neutral-200/80 bg-white p-12 text-center shadow-xs dark:border-neutral-800 dark:bg-neutral-900 flex flex-col items-center">
+                <MapPin className="size-12 text-neutral-300 mb-3" />
+                <h3 className="text-base font-bold text-neutral-800 dark:text-white">No active bookings yet</h3>
+                <p className="text-xs text-neutral-500 max-w-xs mt-1 mb-6">
+                  You haven't requested any Valley of Flowers base campsites. Explore our listings to start!
+                </p>
+                <Button asChild className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+                  <Link href="/packages">
+                    Browse Available Campsites
+                  </Link>
+                </Button>
               </div>
-
-              {bookings.length === 0 ? (
-                <div className="rounded-[2rem] border border-neutral-100 bg-white p-12 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-900 flex flex-col items-center">
-                  <MapPin className="size-12 text-neutral-300 mb-3" />
-                  <h3 className="text-base font-bold text-neutral-800 dark:text-white">No active bookings yet</h3>
-                  <p className="text-xs text-neutral-500 max-w-xs mt-1 mb-6">
-                    You haven't requested any Valley of Flowers base campsites. Explore our listings to start!
-                  </p>
-                  <Button asChild className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
-                    <Link href="/packages">
-                      Browse Available Campsites
-                    </Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {bookings.map((booking) => (
-                    <div
-                      key={booking.bookingId}
-                      className="rounded-[2rem] border border-neutral-100 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 space-y-4 hover:shadow-md transition-shadow"
-                    >
-                      {/* Top Bar: Booking ID and Status Badges */}
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b pb-3 border-neutral-100 dark:border-neutral-800">
-                        <div>
-                          <span className="text-[10px] font-bold text-neutral-400 block uppercase tracking-wider">Booking ID</span>
-                          <span className="text-xs font-extrabold text-neutral-800 dark:text-white font-mono">{booking.bookingId}</span>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          {getStatusBadge(booking.status)}
-                          {getPaymentStatusBadge(booking.paymentStatus)}
-                        </div>
+            ) : (
+              <div className="space-y-6">
+                {bookings.map((booking) => (
+                  <div
+                    key={booking.bookingId}
+                    className="rounded-[2.5rem] border border-neutral-200/80 bg-white p-6 md:p-8 shadow-xs dark:border-neutral-800 dark:bg-neutral-900 space-y-6 hover:shadow-md transition-shadow"
+                  >
+                    {/* Top Bar: Booking ID and Status Badges */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-4 border-neutral-100 dark:border-neutral-800">
+                      <div>
+                        <span className="text-[10px] font-bold text-neutral-400 block uppercase tracking-wider">BOOKING ID</span>
+                        <span className="text-xs font-mono font-extrabold text-neutral-900 dark:text-white block mt-0.5">{booking.bookingId}</span>
                       </div>
-
-                      {/* Body: Camp Name, Date, Guests, Thumbnail */}
-                      <div className="grid gap-4 sm:grid-cols-4 items-center text-xs">
-                        {booking.thumbnailImage && (
-                          <div className="sm:col-span-1 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 max-h-24 bg-neutral-950">
-                            <img src={booking.thumbnailImage} alt={booking.packageName} className="w-full h-full object-cover" />
-                          </div>
-                        )}
-                        <div className={booking.thumbnailImage ? "sm:col-span-1" : "sm:col-span-1"}>
-                          <span className="text-[10px] text-neutral-400 block mb-0.5 font-bold uppercase tracking-wider">Selected Package</span>
-                          <span className="font-extrabold text-neutral-900 dark:text-white text-sm">{booking.packageName}</span>
-                          <span className="text-[10px] text-neutral-400 block mt-0.5">Package #{booking.packageId}</span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-neutral-400 block mb-0.5 font-bold uppercase tracking-wider">Travel Date</span>
-                          <span className="font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                            <Calendar className="size-3.5 text-emerald-600" /> {booking.travelDate}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-neutral-400 block mb-0.5 font-bold uppercase tracking-wider">Permits / Guests</span>
-                          <span className="font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                            <Users className="size-3.5 text-emerald-600" /> {booking.adults} Adults, {booking.children} Children
-                          </span>
-                        </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {getStatusBadge(booking.status)}
+                        {getPaymentStatusBadge(booking.paymentStatus)}
                       </div>
+                    </div>
 
-                      {/* Traveler Breakdown */}
-                      <div className="rounded-xl bg-slate-50 dark:bg-neutral-950 p-4 border border-neutral-100 dark:border-neutral-800 space-y-2">
-                        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">Registered Guest Credentials:</span>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {booking.travelers.map((t, idx) => (
-                            <div key={idx} className="text-xs flex items-center justify-between p-2 rounded-lg bg-white border border-neutral-100/50 dark:bg-neutral-900 dark:border-neutral-800">
-                              <div>
-                                <span className="font-semibold text-neutral-800 dark:text-neutral-200">
-                                  {t.fullName}
-                                </span>
-                                <span className="text-[10px] text-neutral-400 block">ID: {t.idProofType} ({t.idProofNumber})</span>
-                              </div>
-                              <span className="text-[10px] text-neutral-400 bg-neutral-50 px-1.5 py-0.5 rounded font-medium dark:bg-neutral-800">
-                                {t.gender}, {t.age}y
-                              </span>
+                    {/* Body: Camp Name, Date, Guests */}
+                    <div className="grid gap-6 sm:grid-cols-3 items-start text-xs">
+                      <div>
+                        <span className="text-[10px] text-neutral-400 block mb-1 font-bold uppercase tracking-wider">SELECTED PACKAGE</span>
+                        <strong className="font-extrabold text-neutral-900 dark:text-white text-sm block leading-tight">{booking.packageName}</strong>
+                        <span className="text-[10px] text-neutral-400 block mt-1">Package #{booking.packageId}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-400 block mb-1 font-bold uppercase tracking-wider">TRAVEL DATE</span>
+                        <span className="font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5 text-xs">
+                          <Calendar className="size-3.5 text-emerald-600" /> {booking.travelDate}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-400 block mb-1 font-bold uppercase tracking-wider">PERMITS / GUESTS</span>
+                        <span className="font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5 text-xs">
+                          <Users className="size-3.5 text-emerald-600" /> {booking.adults} Adults, {booking.children} Children
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Registered Guest Credentials */}
+                    <div className="rounded-2xl bg-slate-50/60 dark:bg-neutral-950 p-4 border border-neutral-100 dark:border-neutral-800/80 space-y-2.5">
+                      <span className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-wider block">
+                        REGISTERED GUEST CREDENTIALS:
+                      </span>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {booking.travelers.map((t, idx) => (
+                          <div key={idx} className="text-xs flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200/60 dark:bg-neutral-900 dark:border-neutral-800 shadow-2xs">
+                            <div>
+                              <strong className="font-bold text-neutral-900 dark:text-white block text-xs">
+                                {t.fullName || "Lead Traveler"}
+                              </strong>
+                              <span className="text-[10px] text-neutral-400 block mt-0.5">ID: {t.idProofType || "Aadhaar Card"} ({t.idProofNumber || "N/A"})</span>
                             </div>
-                          ))}
-                        </div>
+                            <span className="text-[10px] font-semibold text-neutral-500 bg-slate-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md">
+                              {t.gender || "Male"}, {t.age || 25}y
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Bottom: Transaction Reference & Actions */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-2 text-xs border-t border-neutral-100 dark:border-neutral-800">
+                      <div>
+                        <span className="text-[10px] font-bold text-neutral-400 block uppercase tracking-wider">Transaction Reference</span>
+                        <span className="font-mono text-xs font-extrabold text-neutral-700 dark:text-neutral-300 block mt-0.5">
+                          {booking.utr ? booking.utr : "N/A (No receipt submitted)"}
+                        </span>
                       </div>
 
-                      {/* Bottom: Payment Copy details, Upload screenshot button & Next steps */}
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2 text-xs">
-                        <div>
-                          <span className="text-[10px] text-neutral-400 block">Transaction Reference</span>
-                          <span className="font-bold text-neutral-700 dark:text-neutral-300 font-mono">
-                            {booking.utr ? booking.utr : "N/A (No receipt submitted)"}
-                          </span>
-
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            {booking.screenshotUrl && booking.screenshotUrl !== "PAY_ON_SPOT" && (
-                              <a
-                                href={booking.screenshotUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 hover:underline dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-200/50 dark:border-emerald-900/30"
-                              >
-                                <Eye className="size-3" /> View Current Receipt Image
-                              </a>
-                            )}
-                          </div>
+                      <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
+                        <div className="text-right">
+                          <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider block">TOTAL AMOUNT</span>
+                          <strong className="font-black text-emerald-600 dark:text-emerald-400 text-base">₹{booking.totalAmount.toLocaleString("en-IN")}</strong>
                         </div>
 
-                        <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between">
-                          <div className="text-right sm:pr-2">
-                            <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider block">Total Amount</span>
-                            <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">₹{booking.totalAmount.toLocaleString("en-IN")}</span>
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            onClick={() => handleOpenEditBooking(booking)}
+                            size="sm"
+                            variant="outline"
+                            className="rounded-xl border-neutral-200 text-neutral-700 hover:bg-slate-50 dark:border-neutral-800 dark:text-neutral-300 text-xs h-9 font-extrabold px-4 flex items-center gap-1.5"
+                          >
+                            <Edit className="size-3.5" /> Edit Details
+                          </Button>
 
-                          <div className="flex items-center gap-2">
-                            {booking.status === "pending_payment" && (
-                              <Button asChild size="sm" className="rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-semibold">
-                                <Link href={`/payment?bookingId=${booking.bookingId}`}>
-                                  Complete Checkout <ArrowRight className="size-3.5 ml-1" />
-                                </Link>
-                              </Button>
-                            )}
-
+                          {(booking.status === "pending_payment" || booking.status === "pending") && (
                             <Button
-                              onClick={() => handleOpenEditBooking(booking)}
+                              onClick={() => handleCancelBooking(booking.bookingId)}
                               size="sm"
                               variant="outline"
-                              className="rounded-lg border-neutral-200 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-300 text-xs h-8 font-semibold"
+                              className="rounded-xl border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/40 dark:text-rose-400 text-xs h-9 font-bold px-3.5"
                             >
-                              <Edit className="size-3 mr-1" /> Edit Details
+                              Cancel
                             </Button>
-
-                            {(booking.status === "pending_payment" || booking.status === "pending") && (
-                              <Button
-                                onClick={() => handleCancelBooking(booking.bookingId)}
-                                size="sm"
-                                variant="outline"
-                                className="rounded-lg border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-900/40 dark:text-rose-400 dark:hover:bg-rose-950/30 text-xs h-8"
-                              >
-                                Cancel
-                              </Button>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </div>
-
                     </div>
-                  ))}
+
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: Explore Packages Sidebar */}
+          <div className="lg:col-span-5 xl:col-span-4 space-y-6 sticky top-24">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-extrabold text-neutral-900 dark:text-white flex items-center gap-2 tracking-tight">
+                <Sparkles className="size-5 text-amber-500" /> Explore Packages
+              </h2>
+              <Link href="/packages" className="text-xs font-black text-emerald-600 dark:text-emerald-400 hover:underline">
+                View All →
+              </Link>
+            </div>
+
+            <div className="space-y-4">
+              {allPackages.length === 0 ? (
+                <div className="p-6 text-center rounded-[2rem] border border-neutral-200/80 bg-white dark:bg-neutral-900">
+                  <p className="text-xs font-bold text-neutral-400">Loading campsite packages...</p>
                 </div>
+              ) : (
+                allPackages.map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    className="group rounded-[2rem] border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 shadow-sm hover:shadow-lg hover:border-emerald-500/40 transition-all duration-300 space-y-3 overflow-hidden"
+                  >
+                    {pkg.images && pkg.images.length > 0 ? (
+                      <div className="rounded-2xl overflow-hidden aspect-[16/9] bg-neutral-950 relative">
+                        <img
+                          src={pkg.images[0]}
+                          alt={pkg.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-90" />
+                        <span className="absolute bottom-2.5 left-3 text-xs font-black text-white">
+                          ₹{Number(pkg.price).toLocaleString("en-IN")} <span className="text-[10px] font-normal text-slate-300">/ person</span>
+                        </span>
+                      </div>
+                    ) : null}
+
+                    <div className="space-y-1">
+                      <h3 className="font-extrabold text-sm text-neutral-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                        {pkg.name}
+                      </h3>
+                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed">
+                        {pkg.shortDescription || pkg.description}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800 text-[11px]">
+                      <span className="font-bold text-neutral-500 dark:text-neutral-400 flex items-center gap-1">
+                        <Calendar className="size-3.5 text-emerald-600 shrink-0" /> {pkg.duration || '3 Days'}
+                      </span>
+                      <Button asChild size="sm" className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] h-8 px-3.5 shadow-xs">
+                        <Link href={`/packages/${pkg.id}`}>
+                          Book Camp <ArrowRight className="size-3 ml-1" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           </div>

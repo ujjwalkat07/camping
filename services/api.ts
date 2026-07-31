@@ -215,7 +215,8 @@ function mapBackendBooking(b: any): Booking {
     travelDate: b.travelDate || new Date().toISOString().split('T')[0],
     totalAmount: Number(b.totalAmount || (b.adults * 5000) + (b.children * 2500) || 5000),
     status: normalizeStatus(rawStatus),
-    paymentStatus: String(b.paymentStatus || 'PENDING').toUpperCase(), specialRequests: b.specialRequest || b.specialRequests,
+    paymentStatus: String(b.paymentStatus || (rawStatus === 'APPROVED' || rawStatus === 'approved' ? 'APPROVED' : 'PENDING')).toUpperCase(),
+    specialRequests: b.specialRequest || b.specialRequests,
     travelers: Array.isArray(b.travelers) && b.travelers.length > 0
       ? b.travelers
       : [{ fullName: b.customerName || b.fullName || 'Lead Traveler', age: b.age || 25, gender: b.gender || 'Male', idProofType: 'Aadhaar Card', idProofNumber: 'N/A' }],
@@ -937,11 +938,14 @@ export const api = {
         requiresAuth: true,
         token: authToken
       });
-      if (res && res.data) {
+      const dataObj = (res && res.data) ? res.data : res;
+      if (dataObj && typeof dataObj === 'object') {
+        const rawStatus = dataObj.paymentStatus || dataObj.status || dataObj.payment_status;
         return {
-          ...res.data,
-          message: res.message || res.data.message,
-          timestamp: res.timestamp || res.data.timestamp
+          ...dataObj,
+          paymentStatus: rawStatus ? String(rawStatus).toUpperCase() : undefined,
+          message: res.message || dataObj.message,
+          timestamp: res.timestamp || dataObj.timestamp
         };
       }
       return res;
