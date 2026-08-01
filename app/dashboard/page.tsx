@@ -25,6 +25,7 @@ import {
   Home,
   Heart,
   Eye,
+  ExternalLink,
   Upload,
   Edit,
   X,
@@ -41,6 +42,26 @@ export default function DashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [allPackages, setAllPackages] = useState<Package[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Preview Payment Screenshot Modal State
+  const [previewScreenshot, setPreviewScreenshot] = useState<{ url: string; bookingId: string } | null>(null);
+
+  const formatDate = (dateStr?: string | null) => {
+    if (!dateStr) return null;
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    } catch {
+      return dateStr;
+    }
+  };
 
   // Profile Settings Form State
   const [activeTab, setActiveTab] = useState<"bookings" | "profile">("bookings");
@@ -156,14 +177,26 @@ export default function DashboardPage() {
         data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setBookings(data);
 
+        // Fetch user profile details via GET /api/user/profile
+        let freshUser = user;
+        try {
+          const profileData = await api.getUserProfile(token || undefined);
+          if (profileData) {
+            freshUser = profileData;
+            setCurrentUser(profileData);
+          }
+        } catch (pe) {
+          console.warn("Failed to fetch /api/user/profile:", pe);
+        }
+
         // Pre-fill profile state
         setProfileForm({
-          name: user.name || "",
-          email: user.email || "",
-          phoneNumber: user.phoneNumber || "",
-          emergencyContactName: user.emergencyContactName || "",
-          emergencyContactPhone: user.emergencyContactPhone || "",
-          address: user.address || ""
+          name: freshUser.name || "",
+          email: freshUser.email || "",
+          phoneNumber: freshUser.phoneNumber || "",
+          emergencyContactName: freshUser.emergencyContactName || "",
+          emergencyContactPhone: freshUser.emergencyContactPhone || "",
+          address: freshUser.address || ""
         });
       } catch (err) {
         console.error(err);
@@ -255,6 +288,7 @@ export default function DashboardPage() {
     setProfileErrorMessage("");
 
     try {
+      const token = tokenStorage.getToken() || undefined;
       const updated = await api.updateUserProfile(currentUser.id, {
         name: profileForm.name,
         email: profileForm.email,
@@ -262,7 +296,8 @@ export default function DashboardPage() {
         emergencyContactName: profileForm.emergencyContactName,
         emergencyContactPhone: profileForm.emergencyContactPhone,
         address: profileForm.address
-      });
+      }, token);
+
       if (updated) {
         setCurrentUser(updated);
         setProfileSuccessMessage("Your profile credentials have been successfully updated!");
@@ -271,9 +306,9 @@ export default function DashboardPage() {
       } else {
         setProfileErrorMessage("Failed to update profile. Please try again.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setProfileErrorMessage("An error occurred. Please try again.");
+      setProfileErrorMessage(err?.message || "An error occurred. Please try again.");
     } finally {
       setIsSavingProfile(false);
     }
@@ -435,6 +470,11 @@ export default function DashboardPage() {
                       <div>
                         <span className="text-[10px] font-bold text-neutral-400 block uppercase tracking-wider">BOOKING ID</span>
                         <span className="text-xs font-mono font-extrabold text-neutral-900 dark:text-white block mt-0.5">{booking.bookingId}</span>
+                        {booking.createdAt && (
+                          <span className="text-[10px] text-neutral-400 block mt-0.5">
+                            Booked on: {formatDate(booking.createdAt)}
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         {getStatusBadge(booking.status)}
@@ -443,11 +483,20 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Body: Camp Name, Date, Guests */}
-                    <div className="grid gap-6 sm:grid-cols-3 items-start text-xs">
-                      <div>
-                        <span className="text-[10px] text-neutral-400 block mb-1 font-bold uppercase tracking-wider">SELECTED PACKAGE</span>
-                        <strong className="font-extrabold text-neutral-900 dark:text-white text-sm block leading-tight">{booking.packageName}</strong>
-                        <span className="text-[10px] text-neutral-400 block mt-1">Package #{booking.packageId}</span>
+                    <div className="grid gap-6 sm:grid-cols-3 items-center text-xs">
+                      <div className="flex items-center gap-3">
+                        {booking.thumbnailImage ? (
+                          <img
+                            src={booking.thumbnailImage}
+                            alt={booking.packageName}
+                            className="w-12 h-12 rounded-xl object-cover border border-neutral-200 dark:border-neutral-800 shrink-0 shadow-2xs"
+                          />
+                        ) : null}
+                        <div>
+                          <span className="text-[10px] text-neutral-400 block mb-0.5 font-bold uppercase tracking-wider">SELECTED PACKAGE</span>
+                          <strong className="font-extrabold text-neutral-900 dark:text-white text-sm block leading-tight">{booking.packageName}</strong>
+                          <span className="text-[10px] text-neutral-400 block mt-1">Package #{booking.packageId}</span>
+                        </div>
                       </div>
                       <div>
                         <span className="text-[10px] text-neutral-400 block mb-1 font-bold uppercase tracking-wider">TRAVEL DATE</span>
@@ -464,34 +513,80 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Registered Guest Credentials */}
-                    <div className="rounded-2xl bg-slate-50/60 dark:bg-neutral-950 p-4 border border-neutral-100 dark:border-neutral-800/80 space-y-2.5">
+                    <div className="rounded-2xl bg-slate-50/60 dark:bg-neutral-950 p-4 border border-neutral-100 dark:border-neutral-800/80 space-y-3">
                       <span className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-wider block">
-                        REGISTERED GUEST CREDENTIALS:
+                        REGISTERED TRAVELLERS DETAILS ({booking.travelers.length}):
                       </span>
-                      <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="grid gap-3 sm:grid-cols-2">
                         {booking.travelers.map((t, idx) => (
-                          <div key={idx} className="text-xs flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200/60 dark:bg-neutral-900 dark:border-neutral-800 shadow-2xs">
-                            <div>
-                              <strong className="font-bold text-neutral-900 dark:text-white block text-xs">
+                          <div key={t.id || idx} className="text-xs p-3.5 rounded-xl bg-white border border-slate-200/60 dark:bg-neutral-900 dark:border-neutral-800 shadow-2xs space-y-2">
+                            <div className="flex items-center justify-between border-b pb-2 border-slate-100 dark:border-neutral-800">
+                              <strong className="font-extrabold text-neutral-900 dark:text-white text-xs">
                                 {t.fullName || "Lead Traveler"}
                               </strong>
-                              <span className="text-[10px] text-neutral-400 block mt-0.5">ID: {t.idProofType || "Aadhaar Card"} ({t.idProofNumber || "N/A"})</span>
+                              <span className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 bg-slate-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md">
+                                {t.gender || "Male"}, {t.age || 25} yrs
+                              </span>
                             </div>
-                            <span className="text-[10px] font-semibold text-neutral-500 bg-slate-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md">
-                              {t.gender || "Male"}, {t.age || 25}y
-                            </span>
+
+                            <div className="text-[11px] text-neutral-600 dark:text-neutral-400 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-neutral-400">ID Proof:</span>
+                                <span className="font-mono font-bold text-neutral-800 dark:text-neutral-200">{t.idProofType || "Aadhaar Card"} - {t.idProofNumber || "N/A"}</span>
+                              </div>
+
+                              {t.phoneNumber && (
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium text-neutral-400">Mobile:</span>
+                                  <span className="font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1">
+                                    <Phone className="size-3 text-emerald-600" /> {t.phoneNumber}
+                                  </span>
+                                </div>
+                              )}
+
+                              {t.emergencyContact && t.emergencyContact !== "None" && (
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium text-neutral-400">Emergency:</span>
+                                  <span className="font-semibold text-rose-600 dark:text-rose-400">{t.emergencyContact}</span>
+                                </div>
+                              )}
+
+                              {t.medicalCondition && t.medicalCondition !== "None" && (
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium text-neutral-400">Medical:</span>
+                                  <span className="font-semibold text-amber-600 dark:text-amber-400">{t.medicalCondition}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
                     </div>
 
                     {/* Bottom: Transaction Reference & Actions */}
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-2 text-xs border-t border-neutral-100 dark:border-neutral-800">
-                      <div>
-                        <span className="text-[10px] font-bold text-neutral-400 block uppercase tracking-wider">Transaction Reference</span>
-                        <span className="font-mono text-xs font-extrabold text-neutral-700 dark:text-neutral-300 block mt-0.5">
-                          {booking.utr ? booking.utr : "N/A (No receipt submitted)"}
-                        </span>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-3 text-xs border-t border-neutral-100 dark:border-neutral-800">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-neutral-400 block uppercase tracking-wider">Transaction & Payment Details</span>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="font-mono text-xs font-extrabold text-neutral-800 dark:text-neutral-200">
+                            UTR: {booking.utr ? booking.utr : "N/A (No receipt submitted)"}
+                          </span>
+
+                          {booking.screenshotUrl && (
+                            <button
+                              onClick={() => setPreviewScreenshot({ url: booking.screenshotUrl!, bookingId: booking.bookingId })}
+                              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:underline bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200/60 dark:border-emerald-800/40"
+                            >
+                              <Eye className="size-3.5" /> View Payment Receipt
+                            </button>
+                          )}
+                        </div>
+
+                        {booking.uploadedAt && (
+                          <span className="text-[10px] text-neutral-400 block">
+                            Receipt Uploaded: {formatDate(booking.uploadedAt)}
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
@@ -955,6 +1050,56 @@ export default function DashboardPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* PREVIEW PAYMENT SCREENSHOT MODAL */}
+      {previewScreenshot && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                  <CreditCard className="size-5 text-emerald-600" /> Payment Receipt Proof
+                </h3>
+                <p className="text-xs text-neutral-400">
+                  Booking ID: #{previewScreenshot.bookingId}
+                </p>
+              </div>
+              <button
+                onClick={() => setPreviewScreenshot(null)}
+                className="rounded-full p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center p-2 border border-neutral-800 min-h-[300px]">
+              <img
+                src={previewScreenshot.url}
+                alt="Payment Receipt Screenshot"
+                className="max-h-[60vh] object-contain rounded-xl"
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <a
+                href={previewScreenshot.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+              >
+                <ExternalLink className="size-3.5" /> Open full image in new tab
+              </a>
+              <Button
+                type="button"
+                onClick={() => setPreviewScreenshot(null)}
+                className="rounded-xl bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 text-xs font-bold px-4 h-9"
+              >
+                Close
+              </Button>
+            </div>
           </div>
         </div>
       )}

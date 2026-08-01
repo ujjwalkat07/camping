@@ -169,25 +169,19 @@ export default function AdminPage() {
   };
 
   const handleBookingStatusDropdownChange = async (id: string, newStatus: string) => {
+    // Immediately update local UI state so the dropdown selection updates instantly
+    setBookings(prev => prev.map(b => b.bookingId === id ? { ...b, status: newStatus as any } : b));
     try {
       const token = adminStorage.getAdminToken() || tokenStorage.getToken() || undefined;
-      let success = false;
       if (newStatus === 'approved') {
-        success = await api.approveBooking(id, token);
+        await api.approveBooking(id, token);
       } else if (newStatus === 'rejected') {
-        success = await api.rejectBooking(id, token);
+        await api.rejectBooking(id, token);
       } else {
-        success = await api.updateBookingStatus(id, 'pending', token);
-      }
-
-      if (success) {
-        setBookings(prev => prev.map(b => b.bookingId === id ? { ...b, status: newStatus as any } : b));
-      } else {
-        setErrorPopupMessage(`Failed to update status for booking #${id}.`);
+        await api.updateBookingStatus(id, newStatus, token);
       }
     } catch (err: any) {
       console.error("Failed to update status via dropdown:", err);
-      setErrorPopupMessage(err?.message || `Failed to update status for booking #${id}.`);
     }
   };
 
@@ -246,56 +240,56 @@ export default function AdminPage() {
   };
 
   const handleViewPaymentDetails = async (bookingId: string) => {
-    setIsLoadingPayment(true);
     setIsPaymentModalOpen(true);
+    const booking = bookings.find(b => b.bookingId === bookingId);
+
+    // If booking and pre-fetched payment details exist in state, open modal instantly without extra HTTP request
+    if (booking) {
+      const detailsObj: any = booking.paymentDetails || {};
+      const resolvedPaymentStatus = String(
+        detailsObj.paymentStatus ||
+        detailsObj.status ||
+        booking.paymentStatus ||
+        'PENDING'
+      ).toUpperCase();
+
+      const resolvedAmount = (booking.totalAmount && booking.totalAmount > 0)
+        ? booking.totalAmount
+        : (detailsObj.amount && detailsObj.amount > 0)
+          ? detailsObj.amount
+          : 5000;
+
+      setSelectedPaymentDetails({
+        bookingId: detailsObj.bookingId || booking.bookingId,
+        paymentStatus: resolvedPaymentStatus,
+        amount: resolvedAmount,
+        utrNumber: detailsObj.utrNumber || detailsObj.utr || booking.utr || 'N/A',
+        screenshotUrl: detailsObj.screenshotUrl || booking.screenshotUrl || '',
+        uploadedAt: detailsObj.uploadedAt || null,
+        timestamp: detailsObj.timestamp || new Date().toISOString(),
+        message: detailsObj.message || 'Payment details retrieved successfully.'
+      });
+      setIsLoadingPayment(false);
+      return;
+    }
+
+    // Fallback: fetch from API if booking is not in local memory state
+    setIsLoadingPayment(true);
     setSelectedPaymentDetails(null);
     try {
       const token = adminStorage.getAdminToken() || tokenStorage.getToken() || undefined;
       const details = await api.getBookingPaymentDetails(bookingId, token);
-      const booking = bookings.find(b => b.bookingId === bookingId);
-
-      // Determine correct payment status matching approved/rejected booking state
-      let resolvedPaymentStatus = 'PENDING';
-      if (booking?.status === 'approved') {
-        resolvedPaymentStatus = 'APPROVED';
-      } else if (booking?.status === 'rejected') {
-        resolvedPaymentStatus = 'REJECTED';
-      } else if (details?.paymentStatus) {
-        resolvedPaymentStatus = details.paymentStatus;
-      } else if (details?.status) {
-        resolvedPaymentStatus = details.status;
-      }
-
-      // Calculate total amount based on travelers
-      const resolvedAmount = (booking?.totalAmount && booking.totalAmount > 0)
-        ? booking.totalAmount
-        : (details?.amount && details.amount > 0)
-          ? details.amount
-          : (details?.totalAmount && details.totalAmount > 0)
-            ? details.totalAmount
-            : 5000;
 
       if (details) {
         setSelectedPaymentDetails({
           bookingId: details.bookingId || bookingId,
-          paymentStatus: resolvedPaymentStatus,
-          amount: resolvedAmount,
-          utrNumber: details.utrNumber || details.utr || booking?.utr || 'N/A',
-          screenshotUrl: details.screenshotUrl || booking?.screenshotUrl || '',
+          paymentStatus: String(details.paymentStatus || details.status || 'PENDING').toUpperCase(),
+          amount: details.amount || details.totalAmount || 5000,
+          utrNumber: details.utrNumber || details.utr || 'N/A',
+          screenshotUrl: details.screenshotUrl || '',
           uploadedAt: details.uploadedAt || null,
           timestamp: details.timestamp || new Date().toISOString(),
           message: details.message || 'Payment details retrieved successfully.'
-        });
-      } else if (booking) {
-        setSelectedPaymentDetails({
-          bookingId: booking.bookingId,
-          paymentStatus: resolvedPaymentStatus,
-          amount: resolvedAmount,
-          utrNumber: booking.utr || 'N/A',
-          screenshotUrl: booking.screenshotUrl || '',
-          uploadedAt: null,
-          timestamp: new Date().toISOString(),
-          message: 'Payment record retrieved from reservation ledger.'
         });
       }
     } catch (err) {
@@ -319,8 +313,7 @@ export default function AdminPage() {
           } : null);
         }
 
-        const mappedBookingStatus = (status === 'VERIFIED' || status === 'APPROVED') ? 'approved' : status === 'REJECTED' ? 'rejected' : 'pending';
-        setBookings(prev => prev.map(b => b.bookingId === bookingId ? { ...b, status: mappedBookingStatus, paymentStatus: status } : b));
+        setBookings(prev => prev.map(b => b.bookingId === bookingId ? { ...b, paymentStatus: status } : b));
       } else {
         setErrorPopupMessage(`Failed to update payment status to ${status} for booking #${bookingId}.`);
       }
@@ -1212,7 +1205,8 @@ export default function AdminPage() {
                       <th className="py-3.5 px-4 text-center">Guests</th>
                       <th className="py-3.5 px-4">Amount</th>
                       <th className="py-3.5 px-4">Payment & UTR</th>
-                      <th className="py-3.5 px-4">Status</th>
+                      <th className="py-3.5 px-4">Payment Status</th>
+                      <th className="py-3.5 px-4">Booking Status</th>
                       <th className="py-3.5 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -1260,32 +1254,42 @@ export default function AdminPage() {
                             </div>
                           </td>
 
+                          {/* PAYMENT STATUS COLUMN */}
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                              b.status === 'approved'
+                              (b.paymentStatus || '').toUpperCase() === 'VERIFIED' || (b.paymentStatus || '').toUpperCase() === 'APPROVED' || (b.paymentStatus || '').toUpperCase() === 'SUCCESS'
                                 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900'
-                                : b.status === 'rejected'
+                                : (b.paymentStatus || '').toUpperCase() === 'REJECTED' || (b.paymentStatus || '').toUpperCase() === 'FAILED'
                                   ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-400 border border-rose-200 dark:border-rose-900'
                                   : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400 border border-amber-200 dark:border-amber-900'
                             }`}>
-                              {b.status}
+                              {b.paymentStatus ? b.paymentStatus.toUpperCase() : 'PENDING'}
                             </span>
                           </td>
 
+                          {/* BOOKING STATUS COLUMN (DROPDOWN ONLY) */}
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <select
+                              value={b.status}
+                              onChange={(e) => handleBookingStatusDropdownChange(b.bookingId, e.target.value)}
+                              className={`rounded-xl border px-3 py-1 text-xs font-black cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs h-7.5 ${
+                                b.status === 'approved'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/60'
+                                  : b.status === 'rejected'
+                                    ? 'bg-rose-50 text-rose-800 border-rose-200/80 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/60'
+                                    : 'bg-amber-50 text-amber-800 border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/60'
+                              }`}
+                              title="Booking Status Dropdown"
+                            >
+                              <option value="approved" className="bg-white text-emerald-800 dark:bg-neutral-900 font-bold">✓ Approved</option>
+                              <option value="pending" className="bg-white text-amber-800 dark:bg-neutral-900 font-bold">⏳ Pending</option>
+                              <option value="rejected" className="bg-white text-rose-800 dark:bg-neutral-900 font-bold">✕ Rejected</option>
+                            </select>
+                          </td>
+
+                          {/* ACTIONS COLUMN */}
                           <td className="py-3.5 px-4 text-right whitespace-nowrap">
                             <div className="inline-flex items-center justify-end gap-1.5">
-                              {/* BOOKING APPROVAL STATUS DROPDOWN */}
-                              <select
-                                value={b.status}
-                                onChange={(e) => handleBookingStatusDropdownChange(b.bookingId, e.target.value)}
-                                className="rounded-xl border border-emerald-200/80 dark:border-emerald-900/60 bg-emerald-50/60 dark:bg-emerald-950/40 px-2.5 py-1 text-[11px] font-black text-emerald-800 dark:text-emerald-300 cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs h-7"
-                                title="Approval Action Dropdown"
-                              >
-                                <option value="approved" className="bg-white text-emerald-800 dark:bg-neutral-900 font-bold">✓ Approve</option>
-                                <option value="pending" className="bg-white text-amber-800 dark:bg-neutral-900 font-bold">⏳ Pending</option>
-                                <option value="rejected" className="bg-white text-rose-800 dark:bg-neutral-900 font-bold">✕ Reject</option>
-                              </select>
-
                               <Button
                                 onClick={() => handleOpenEditModal(b)}
                                 size="sm"

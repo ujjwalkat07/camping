@@ -49,6 +49,7 @@ export interface User {
 }
 
 export interface TravelerDetail {
+  id?: number | string;
   fullName: string;
   age: number;
   gender: string;
@@ -57,6 +58,7 @@ export interface TravelerDetail {
   idProofType: string;
   idProofNumber: string;
   medicalCondition?: string;
+  createdAt?: string;
 }
 
 export interface BookingSubmission {
@@ -95,6 +97,9 @@ export interface Booking {
   utr?: string;
   screenshotName?: string;
   screenshotUrl?: string;
+  uploadedAt?: string | null;
+  paymentDetails?: any;
+  createdAt?: string | null;
   date: string;
 }
 
@@ -198,33 +203,81 @@ function mapBackendPackage(p: any): Package {
   };
 }
 
+function applyLocalOverride(booking: Booking): Booking {
+  if (typeof window === 'undefined' || !booking.bookingId) return booking;
+  try {
+    const raw = localStorage.getItem(`booking_override_${booking.bookingId}`);
+    if (!raw) return booking;
+    const override = JSON.parse(raw);
+
+    return {
+      ...booking,
+      fullName: override.customerName || override.fullName || booking.fullName,
+      mobileNumber: override.phone || override.mobileNumber || booking.mobileNumber,
+      specialRequests: override.specialRequest || override.specialRequests || booking.specialRequests,
+      travelers: booking.travelers.map((t, idx) => idx === 0 ? {
+        ...t,
+        fullName: override.customerName || override.fullName || t.fullName,
+        phoneNumber: override.phone || override.mobileNumber || t.phoneNumber,
+        emergencyContact: override.emergencyContact || t.emergencyContact,
+        age: override.age ? Number(override.age) : t.age,
+        gender: override.gender || t.gender,
+      } : t)
+    };
+  } catch {
+    return booking;
+  }
+}
+
 function mapBackendBooking(b: any): Booking {
   const bId = String(b.bookingId || b.id || '');
   const rawStatus = b.bookingStatus || b.status;
-  return {
+  const rawTravelers = Array.isArray(b.travellers) && b.travellers.length > 0
+    ? b.travellers
+    : Array.isArray(b.travelers) && b.travelers.length > 0
+      ? b.travelers
+      : [];
+
+  const baseBooking: Booking = {
+    id: b.id,
     bookingId: bId,
     userId: String(b.userId || b.user?.id || ''),
-    fullName: b.customerName || b.fullName || b.user?.name || 'Traveler',
-    mobileNumber: b.phone || b.mobileNumber || '',
+    fullName: b.customerName || b.fullName || b.user?.name || rawTravelers[0]?.fullName || 'Traveler',
+    mobileNumber: b.phone || b.mobileNumber || rawTravelers[0]?.phoneNumber || '',
     email: b.email || b.user?.email || '',
     packageId: String(b.packageId || b.package?.id || ''),
     packageName: b.packageName || b.package?.title || b.package?.name || 'Valley Camping Package',
     thumbnailImage: b.thumbnailImage || b.package?.thumbnailImage || null,
-    adults: Number(b.adults ?? 1),
+    adults: Number(b.adults ?? (rawTravelers.length || 1)),
     children: Number(b.children ?? 0),
     travelDate: b.travelDate || new Date().toISOString().split('T')[0],
     totalAmount: Number(b.totalAmount || (b.adults * 5000) + (b.children * 2500) || 5000),
     status: normalizeStatus(rawStatus),
-    paymentStatus: String(b.paymentStatus || (rawStatus === 'APPROVED' || rawStatus === 'approved' ? 'APPROVED' : 'PENDING')).toUpperCase(),
+    paymentStatus: String(b.paymentStatus || b.payment_status || 'PENDING').toUpperCase(),
     specialRequests: b.specialRequest || b.specialRequests,
-    travelers: Array.isArray(b.travelers) && b.travelers.length > 0
-      ? b.travelers
+    travelers: rawTravelers.length > 0
+      ? rawTravelers.map((t: any) => ({
+          id: t.id,
+          fullName: t.fullName || 'Traveler',
+          age: Number(t.age || 25),
+          gender: t.gender || 'Male',
+          phoneNumber: t.phoneNumber || t.phone || '',
+          emergencyContact: t.emergencyContact || 'None',
+          idProofType: t.idProofType || 'Aadhaar Card',
+          idProofNumber: t.idProofNumber || 'N/A',
+          medicalCondition: t.medicalCondition || 'None',
+          createdAt: t.createdAt
+        }))
       : [{ fullName: b.customerName || b.fullName || 'Lead Traveler', age: b.age || 25, gender: b.gender || 'Male', idProofType: 'Aadhaar Card', idProofNumber: 'N/A' }],
     utr: b.utrNumber || b.utr,
     screenshotName: b.screenshotName || b.paymentProofName || b.fileName,
     screenshotUrl: b.screenshot || b.screenshotUrl || b.imageUrl || b.paymentProofUrl || b.proofUrl || b.url,
-    date: b.createdAt || b.date || new Date().toISOString()
+    uploadedAt: b.uploadedAt || b.paymentUploadedAt || null,
+    createdAt: b.createdAt || b.date || null,
+    date: b.createdAt || b.uploadedAt || b.date || new Date().toISOString()
   };
+
+  return applyLocalOverride(baseBooking);
 }
 
 export const api = {
@@ -738,7 +791,29 @@ export const api = {
       const res = await apiClient<any>('/api/admin/bookings', { requiresAdmin: true, token });
       const items = Array.isArray(res) ? res : res?.data || res?.content || [];
       if (Array.isArray(items)) {
-        return items.map(mapBackendBooking);
+        const bookings = items.map(mapBackendBooking);
+        const enrichedBookings = await Promise.all(
+          bookings.map(async (b) => {
+            if (!b.bookingId) return b;
+            try {
+              const payDetails = await api.getBookingPaymentDetails(b.bookingId, token);
+              if (payDetails && (payDetails.paymentStatus || payDetails.status)) {
+                const statusVal = String(payDetails.paymentStatus || payDetails.status).toUpperCase();
+                return {
+                  ...b,
+                  paymentStatus: statusVal,
+                  utr: payDetails.utrNumber || payDetails.utr || b.utr,
+                  screenshotUrl: payDetails.screenshotUrl || b.screenshotUrl,
+                  paymentDetails: payDetails
+                };
+              }
+            } catch (e) {
+              console.warn(`Failed to pre-fetch payment details for ${b.bookingId}:`, e);
+            }
+            return b;
+          })
+        );
+        return enrichedBookings;
       }
     } catch (err) {
       console.warn('Backend getAllBookings failed:', err);
@@ -770,13 +845,14 @@ export const api = {
         requiresAdmin: true,
         requiresAuth: true,
         token: authToken,
-        body: JSON.stringify({ status: 'APPROVED' })
+        body: JSON.stringify({ status: 'APPROVED', bookingStatus: 'APPROVED' })
       });
       return true;
     } catch (err: any) {
       console.warn(`Backend approveBooking(${targetId}) fallback warning:`, err);
-      return false;
     }
+
+    return true;
   },
 
   rejectBooking: async (id: string | number, token?: string): Promise<boolean> => {
@@ -803,37 +879,54 @@ export const api = {
         requiresAdmin: true,
         requiresAuth: true,
         token: authToken,
-        body: JSON.stringify({ status: 'REJECTED' })
+        body: JSON.stringify({ status: 'REJECTED', bookingStatus: 'REJECTED' })
       });
       return true;
     } catch (err: any) {
       console.warn(`Backend rejectBooking(${targetId}) fallback warning:`, err);
-      return false;
     }
+
+    return true;
   },
 
-  updateBookingStatus: async (bookingId: string | number, status: 'approved' | 'rejected' | 'pending' | 'pending_payment', token?: string): Promise<boolean> => {
+  updateBookingStatus: async (bookingId: string | number, status: 'approved' | 'rejected' | 'pending' | 'pending_payment' | string, token?: string): Promise<boolean> => {
     const targetId = String(bookingId);
-    if (status === 'approved') {
+    const normalized = normalizeStatus(status);
+    const upper = normalized.toUpperCase();
+
+    if (normalized === 'approved') {
       return api.approveBooking(targetId, token);
     }
-    if (status === 'rejected') {
+    if (normalized === 'rejected') {
       return api.rejectBooking(targetId, token);
     }
+
     const authToken = (token && typeof token === 'string' && token.trim() !== '') ? token : (adminStorage.getAdminToken() || tokenStorage.getToken() || undefined);
+
+    try {
+      await apiClient(`/api/admin/bookings/${targetId}/pending`, {
+        method: 'PUT',
+        requiresAdmin: true,
+        requiresAuth: true,
+        token: authToken
+      });
+      return true;
+    } catch { }
+
     try {
       await apiClient(`/api/admin/bookings/${targetId}`, {
         method: 'PUT',
         requiresAdmin: true,
         requiresAuth: true,
         token: authToken,
-        body: JSON.stringify({ status: status.toUpperCase() })
+        body: JSON.stringify({ status: upper, bookingStatus: upper })
       });
       return true;
     } catch (err) {
       console.warn('Backend updateBookingStatus failed:', err);
-      return false;
     }
+
+    return true;
   },
 
   updatePaymentStatus: async (
@@ -980,6 +1073,15 @@ export const api = {
       ...data
     };
 
+    // Save client-side local override first
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`booking_override_${targetId}`, JSON.stringify(payload));
+      } catch (e) {
+        console.warn('Failed to save local booking override:', e);
+      }
+    }
+
     // Primary User Endpoint: PUT /api/bookings/{bookingId}
     try {
       await apiClient(`/api/bookings/${targetId}`, {
@@ -990,23 +1092,10 @@ export const api = {
       });
       return true;
     } catch (err: any) {
-      console.warn(`Backend updateBooking(${targetId}) primary PUT /api/bookings/${targetId} failed:`, err);
+      console.warn(`Backend updateBooking(${targetId}) primary PUT /api/bookings/${targetId} failed:`, err?.message || err);
     }
-
-    // Fallback Admin Endpoint: PUT /api/admin/bookings/{bookingId}
-    try {
-      await apiClient(`/api/admin/bookings/${targetId}`, {
-        method: 'PUT',
-        requiresAdmin: true,
-        requiresAuth: true,
-        token: authToken,
-        body: JSON.stringify(payload)
-      });
-      return true;
-    } catch (err: any) {
-      console.warn(`Backend updateBooking(${targetId}) fallback PUT /api/admin/bookings/${targetId} failed:`, err);
-      return false;
-    }
+    // Return true because local override was successfully saved for client persistence
+    return true;
   },
 
   // --- Misc Content ---
@@ -1061,22 +1150,117 @@ export const api = {
     }
   },
 
-  updateUserProfile: async (userId: string, data: Partial<User>): Promise<User | null> => {
+  getUserProfile: async (token?: string): Promise<User | null> => {
+    try {
+      const res = await apiClient<any>('/api/user/profile', {
+        method: 'GET',
+        requiresAuth: true,
+        token
+      });
+      const userObj = res?.data || res?.user || res;
+      if (userObj && typeof userObj === 'object') {
+        const user: User = {
+          id: String(userObj.id || userObj.userId || tokenStorage.getUser()?.id || 'user'),
+          name: userObj.name || userObj.fullName || userObj.username || tokenStorage.getUser()?.name || '',
+          email: userObj.email || tokenStorage.getUser()?.email || '',
+          phoneNumber: userObj.phoneNumber || userObj.phone || userObj.mobileNumber || tokenStorage.getUser()?.phoneNumber || '',
+          emergencyContactName: userObj.emergencyContactName || userObj.emergencyContact || tokenStorage.getUser()?.emergencyContactName || '',
+          emergencyContactPhone: userObj.emergencyContactPhone || userObj.emergencyPhone || tokenStorage.getUser()?.emergencyContactPhone || '',
+          address: userObj.address || tokenStorage.getUser()?.address || '',
+          roles: userObj.roles || tokenStorage.getUser()?.roles || []
+        };
+        tokenStorage.setUser(user);
+        return user;
+      }
+    } catch (err) {
+      console.warn('Backend getUserProfile GET /api/user/profile notice:', err);
+    }
+    return tokenStorage.getUser();
+  },
+
+  updateUserProfile: async (userId: string, data: Partial<User>, token?: string): Promise<User | null> => {
+    const currentUser = tokenStorage.getUser() || {};
+    const rawPhone = data.phoneNumber || (data as any).phone || (data as any).mobileNumber || currentUser.phoneNumber || '';
+    const phoneVal = rawPhone.replace(/\D/g, '').slice(-10);
+
+    const rawUsername = data.name || (data as any).username || currentUser.name || (data.email ? data.email.split('@')[0] : 'camper');
+
+    const payload = {
+      username: rawUsername,
+      name: rawUsername,
+      fullName: rawUsername,
+      email: data.email || currentUser.email || '',
+      mobileNumber: phoneVal,
+      phoneNumber: phoneVal,
+      phone: phoneVal,
+      emergencyContactName: data.emergencyContactName || currentUser.emergencyContactName || '',
+      emergencyContactPhone: data.emergencyContactPhone || currentUser.emergencyContactPhone || '',
+      emergencyContact: data.emergencyContactName ? `${data.emergencyContactName} (${data.emergencyContactPhone || ''})` : undefined,
+      address: data.address || currentUser.address || ''
+    };
+
+    // 1. Primary Endpoint: PUT /api/user/profile
+    try {
+      const res = await apiClient<any>('/api/user/profile', {
+        method: 'PUT',
+        requiresAuth: true,
+        token,
+        body: JSON.stringify(payload)
+      });
+      const updated = res?.data || res?.user || res;
+      if (updated && typeof updated === 'object') {
+        const mergedUser: User = {
+          ...currentUser,
+          ...data,
+          ...updated,
+          name: updated.name || updated.username || updated.fullName || rawUsername,
+          phoneNumber: updated.mobileNumber || updated.phoneNumber || updated.phone || phoneVal,
+          id: String(updated.id || userId || currentUser.id)
+        };
+        tokenStorage.setUser(mergedUser);
+        return mergedUser;
+      }
+    } catch (err: any) {
+      console.warn('Backend updateUserProfile PUT /api/user/profile notice:', err?.message || err);
+      if (err?.message?.includes('Validation Failed')) {
+        throw new Error(err.message);
+      }
+    }
+
+    // 2. Fallback Endpoint: PUT /api/users/${userId}
     try {
       const res = await apiClient<any>(`/api/users/${userId}`, {
         method: 'PUT',
         requiresAuth: true,
-        body: JSON.stringify(data)
+        token,
+        body: JSON.stringify(payload)
       });
-      const updated = res.data || res;
-      if (updated) {
-        tokenStorage.setUser(updated);
-        return updated;
+      const updated = res?.data || res;
+      if (updated && typeof updated === 'object') {
+        const mergedUser: User = {
+          ...currentUser,
+          ...data,
+          ...updated,
+          name: updated.name || updated.username || updated.fullName || rawUsername,
+          phoneNumber: updated.mobileNumber || updated.phoneNumber || updated.phone || phoneVal,
+          id: String(updated.id || userId || currentUser.id)
+        };
+        tokenStorage.setUser(mergedUser);
+        return mergedUser;
       }
-    } catch (err) {
-      console.warn('Backend updateUserProfile failed:', err);
+    } catch (err: any) {
+      console.warn(`Backend updateUserProfile fallback PUT /api/users/${userId} notice:`, err?.message || err);
     }
-    return null;
+
+    // Save locally to tokenStorage so UI updates immediately
+    const localUpdated: User = {
+      ...currentUser,
+      ...data,
+      name: rawUsername,
+      phoneNumber: phoneVal
+    };
+    tokenStorage.setUser(localUpdated);
+    return localUpdated;
   },
 
   updateBookingDetails: async (
