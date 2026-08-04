@@ -160,36 +160,44 @@ export default function DashboardPage() {
 
     setCurrentUser(user);
 
-    const loadBookings = async () => {
+    const loadBookings = async (isSilent = false) => {
       try {
-        setIsLoading(true);
+        if (!isSilent) {
+          setIsLoading(true);
+        }
         const token = tokenStorage.getToken();
-        const data = await api.getBookings(user.id, token || undefined);
-        // Fetch campsite packages for sidebar display
-        try {
-          const pkgs = await api.getPackages();
-          setAllPackages(pkgs);
-        } catch (e) {
-          console.warn("Failed to load sidebar packages:", e);
+
+        // Fetch bookings, packages, and user profile concurrently
+        const [data, pkgsResult, profileData] = await Promise.all([
+          api.getBookings(user.id, token || undefined).catch(err => {
+            console.error("Failed to load bookings:", err);
+            return [] as Booking[];
+          }),
+          api.getPackages().catch(e => {
+            console.warn("Failed to load sidebar packages:", e);
+            return null;
+          }),
+          api.getUserProfile(token || undefined).catch(pe => {
+            console.warn("Failed to fetch /api/user/profile:", pe);
+            return null;
+          })
+        ]);
+
+        if (pkgsResult) {
+          setAllPackages(pkgsResult);
         }
 
         // Sort bookings by date descending
         data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setBookings(data);
 
-        // Fetch user profile details via GET /api/user/profile
+        // Pre-fill profile state
         let freshUser = user;
-        try {
-          const profileData = await api.getUserProfile(token || undefined);
-          if (profileData) {
-            freshUser = profileData;
-            setCurrentUser(profileData);
-          }
-        } catch (pe) {
-          console.warn("Failed to fetch /api/user/profile:", pe);
+        if (profileData) {
+          freshUser = profileData;
+          setCurrentUser(profileData);
         }
 
-        // Pre-fill profile state
         setProfileForm({
           name: freshUser.name || "",
           email: freshUser.email || "",
@@ -201,23 +209,23 @@ export default function DashboardPage() {
       } catch (err) {
         console.error(err);
       } finally {
-        setIsLoading(false);
+        if (!isSilent) {
+          setIsLoading(false);
+        }
       }
     };
 
-    loadBookings();
+    loadBookings(false);
 
-    // Auto refresh when status changes in another tab/window
+    // Refresh state silently when storage updates occur (e.g. cross-tab actions)
     const handleStorageChange = () => {
-      loadBookings();
+      loadBookings(true);
     };
 
     window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("focus", handleStorageChange);
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("focus", handleStorageChange);
     };
   }, [router]);
 
