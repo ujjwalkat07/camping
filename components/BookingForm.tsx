@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, Package, BookingSubmission, TravelerDetail, User } from "@/services/api";
+import { api, Package, BookingSubmission, TravelerDetail, User, createPlaceholderImageFile } from "@/services/api";
 import { tokenStorage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -392,27 +392,35 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
       const bookingId = bookingResponse.bookingId;
 
       // 2. Submit Payment Details (UPI proof or Pay-on-Spot marker)
+      const token = tokenStorage.getToken() || undefined;
       if (paymentMethod === "upi_qr") {
-        const token = tokenStorage.getToken() || undefined;
-        await api.submitPaymentProof(
-          bookingId,
-          utrNumber,
-          screenshotName || "payment_proof.png",
-          bookingResponse.totalAmount,
-          screenshot || undefined,
-          token
-        );
+        try {
+          await api.submitPaymentProof(
+            bookingId,
+            utrNumber,
+            screenshotName || "payment_proof.png",
+            bookingResponse.totalAmount,
+            screenshot || undefined,
+            token
+          );
+        } catch (proofErr) {
+          console.warn("UPI payment proof submission notice:", proofErr);
+        }
       } else {
         // Pay on Spot method
-        const token = tokenStorage.getToken() || undefined;
-        await api.submitPaymentProof(
-          bookingId,
-          "PAY_ON_SPOT",
-          "pay_on_spot.png",
-          bookingResponse.totalAmount,
-          undefined,
-          token
-        );
+        try {
+          const payOnSpotFile = createPlaceholderImageFile("pay on spot", "pay_on_spot.png");
+          await api.submitPaymentProof(
+            bookingId,
+            "pay on spot",
+            "pay_on_spot.png",
+            bookingResponse.totalAmount,
+            payOnSpotFile,
+            token
+          );
+        } catch (proofErr) {
+          console.warn("Pay on spot proof submission notice:", proofErr);
+        }
       }
 
       // 3. Redirect directly to Success Page

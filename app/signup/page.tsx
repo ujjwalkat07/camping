@@ -161,10 +161,13 @@ function SignupContent() {
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 h-11 flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-600/10 active:scale-[0.99]"
+            className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 h-11 flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-600/10 active:scale-[0.99]"
           >
             {isLoading ? (
-              <LoadingSpinner size={20} className="text-white" />
+              <>
+                <LoadingSpinner size={18} className="text-white" />
+                <span>Registering Account...</span>
+              </>
             ) : (
               <>
                 <CheckCircle2 className="size-4" /> Register Account

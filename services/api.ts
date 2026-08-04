@@ -280,6 +280,63 @@ function mapBackendBooking(b: any): Booking {
   return applyLocalOverride(baseBooking);
 }
 
+export function createPlaceholderImageFile(utrText: string = "pay on spot", filename: string = "pay_on_spot.png"): File {
+  if (typeof document !== "undefined") {
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 600;
+      canvas.height = 300;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        const grad = ctx.createLinearGradient(0, 0, 600, 300);
+        grad.addColorStop(0, "#059669");
+        grad.addColorStop(1, "#047857");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 600, 300);
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+        if (typeof (ctx as any).roundRect === "function") {
+          (ctx as any).roundRect(30, 30, 540, 240, 16);
+        } else {
+          ctx.fillRect(30, 30, 540, 240);
+        }
+        ctx.fill();
+
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "bold 32px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("PAYMENT ON SPOT", 300, 130);
+        ctx.font = "bold 20px sans-serif";
+        ctx.fillText(utrText.toUpperCase(), 300, 180);
+        ctx.font = "14px sans-serif";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.fillText("Base Camp On-Arrival Payment", 300, 220);
+
+        const dataUrl = canvas.toDataURL("image/png");
+        const byteString = atob(dataUrl.split(',')[1]);
+        const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        return new File([ab], filename, { type: mimeString });
+      }
+    } catch (e) {
+      console.warn("Canvas image creation fallback:", e);
+    }
+  }
+
+  // Pure 1x1 valid PNG byte array fallback
+  const png1x1Bytes = new Uint8Array([
+    137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1,
+    0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 213, 196, 237, 0, 0, 0, 13, 73, 68, 65, 84,
+    120, 156, 99, 96, 248, 15, 0, 1, 5, 1, 2, 162, 76, 182, 254, 0, 0, 0, 0, 73,
+    69, 78, 68, 174, 66, 96, 130
+  ]);
+  return new File([png1x1Bytes], filename, { type: 'image/png' });
+}
+
 export const api = {
   // --- Authentication Operations ---
   register: async (email: string, password: string, mobileNumber: string): Promise<ApiResponse> => {
@@ -726,11 +783,7 @@ export const api = {
 
     let fileBlob: Blob | File | undefined = file;
     if (!fileBlob) {
-      fileBlob = new File(
-        [new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])],
-        screenshotName,
-        { type: 'image/png' }
-      );
+      fileBlob = createPlaceholderImageFile(utr, screenshotName || 'pay_on_spot.png');
     }
 
     const filename = (file as File)?.name || screenshotName || 'payment_proof.png';

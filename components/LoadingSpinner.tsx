@@ -6,11 +6,14 @@ interface LoadingSpinnerProps {
 }
 
 export function LoadingSpinner({ className = "", size = 32 }: LoadingSpinnerProps) {
+  const hasTextColor = /\btext-/.test(className);
+  const defaultColorClass = hasTextColor ? "" : "text-emerald-600 dark:text-emerald-500";
+
   return (
-    <div className={`flex items-center justify-center ${className}`}>
+    <div className="inline-flex items-center justify-center shrink-0">
       <Loader2 
         size={size} 
-        className="animate-spin text-emerald-600 dark:text-emerald-500" 
+        className={`animate-spin ${defaultColorClass} ${className}`.trim()} 
       />
     </div>
   );

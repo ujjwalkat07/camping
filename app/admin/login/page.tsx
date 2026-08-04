@@ -126,10 +126,13 @@ function AdminLoginContent() {
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-full rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 h-11 flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-amber-600/10 active:scale-[0.99]"
+            className="w-full rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 h-11 flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-600/10 active:scale-[0.99]"
           >
             {isLoading ? (
-              <LoadingSpinner size={20} className="text-white" />
+              <>
+                <LoadingSpinner size={18} className="text-white" />
+                <span>Signing In to Admin Control...</span>
+              </>
             ) : (
               "Sign In to Admin Control"
             )}
