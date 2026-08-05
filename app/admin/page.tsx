@@ -594,44 +594,50 @@ export default function AdminPage() {
         {/* ========================================================================= */}
         {/* TOP NAVIGATION BAR                                                        */}
         {/* ========================================================================= */}
-        <header className="rounded-[2.5rem] bg-white border border-neutral-100 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 flex flex-col md:flex-row items-center justify-between gap-4 px-6">
+        <header className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl border border-neutral-200/80 dark:border-neutral-800 p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 px-6">
 
           <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-start">
-            <Link href="/admin" className="flex items-center gap-2 font-black text-xl tracking-tight text-neutral-900 dark:text-white">
-              <span className="size-8 rounded-xl bg-neutral-900 text-white flex items-center justify-center text-xs font-black dark:bg-emerald-600">
+            <Link href="/admin" className="flex items-center gap-2.5 font-black text-xl tracking-tight text-neutral-900 dark:text-white group">
+              <span className="size-9 rounded-2xl bg-neutral-900 text-white flex items-center justify-center text-xs font-extrabold dark:bg-emerald-600 shadow-md shadow-emerald-600/10 group-hover:scale-105 transition-transform">
                 VA
               </span>
-              ValleyAdmin
+              <div className="flex flex-col">
+                <span className="leading-none text-base font-extrabold">ValleyAdmin</span>
+                <span className="text-[10px] text-emerald-600 font-extrabold tracking-wider uppercase">Base Portal</span>
+              </div>
             </Link>
 
-            <nav className="flex items-center gap-1 bg-slate-100 dark:bg-neutral-800 p-1.5 rounded-2xl text-xs font-bold">
+            <nav className="flex items-center gap-1 bg-slate-100/80 dark:bg-neutral-800/80 p-1.5 rounded-2xl text-xs font-bold border border-slate-200/60 dark:border-neutral-700/50">
               <button
                 onClick={() => setActiveTab('dashboard')}
-                className={`px-4 py-2 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                className={`px-4 py-2 rounded-xl transition-all font-extrabold ${activeTab === 'dashboard' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
                   }`}
               >
                 Dashboard
               </button>
               <button
                 onClick={() => setActiveTab('bookings')}
-                className={`px-4 py-2 rounded-xl transition-all ${activeTab === 'bookings' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                className={`px-4 py-2 rounded-xl transition-all font-extrabold flex items-center gap-1.5 ${activeTab === 'bookings' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
                   }`}
               >
                 Bookings & Pipeline
+                <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] font-black">
+                  {bookings.length}
+                </span>
               </button>
               <button
                 onClick={() => setActiveTab('contact')}
-                className={`px-4 py-2 rounded-xl transition-all relative ${activeTab === 'contact' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                className={`px-4 py-2 rounded-xl transition-all relative font-extrabold flex items-center gap-1.5 ${activeTab === 'contact' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
                   }`}
               >
                 Contact Messages
                 {contactMessages.some(c => c.status === 'unread') && (
-                  <span className="absolute -top-1 -right-1 size-2.5 rounded-full bg-rose-500 animate-pulse" />
+                  <span className="size-2 rounded-full bg-rose-500 animate-pulse" />
                 )}
               </button>
               <button
                 onClick={() => setActiveTab('packages')}
-                className={`px-4 py-2 rounded-xl transition-all ${activeTab === 'packages' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                className={`px-4 py-2 rounded-xl transition-all font-extrabold ${activeTab === 'packages' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
                   }`}
               >
                 Campsites
@@ -640,18 +646,28 @@ export default function AdminPage() {
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-            <button className="flex size-10 items-center justify-center rounded-full bg-slate-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 relative hover:bg-slate-200 transition-colors">
-              <Bell className="size-4" />
-              <span className="absolute top-2 right-2 size-2 rounded-full bg-emerald-500" />
+            <button 
+              onClick={loadAdminData}
+              className="flex size-10 items-center justify-center rounded-2xl bg-slate-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 hover:bg-slate-200 transition-colors"
+              title="Refresh Admin Data"
+            >
+              <RefreshCw className={`size-4 ${isLoading ? 'animate-spin text-emerald-600' : ''}`} />
             </button>
 
-            <div className="flex items-center gap-2.5 pl-2 border-l border-neutral-200 dark:border-neutral-800">
-              <div className="size-9 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shadow-md">
+            <button className="flex size-10 items-center justify-center rounded-2xl bg-slate-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 relative hover:bg-slate-200 transition-colors">
+              <Bell className="size-4" />
+              <span className="absolute top-2 right-2 size-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+            </button>
+
+            <div className="flex items-center gap-3 pl-3 border-l border-neutral-200 dark:border-neutral-800">
+              <div className="size-10 rounded-2xl bg-neutral-900 text-white font-extrabold text-xs flex items-center justify-center shadow-md dark:bg-emerald-600">
                 {adminUser?.name ? adminUser.name.charAt(0).toUpperCase() : "A"}
               </div>
               <div className="hidden sm:block text-left text-xs">
-                <span className="font-extrabold text-neutral-900 dark:text-white block leading-tight">{adminUser?.name || "Maya Chen"}</span>
-                <span className="text-[10px] text-neutral-400">Valley Admin</span>
+                <span className="font-extrabold text-neutral-900 dark:text-white block leading-tight">{adminUser?.name || "Valley Admin"}</span>
+                <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                  <span className="size-1.5 rounded-full bg-emerald-500"></span> Active Session
+                </span>
               </div>
             </div>
           </div>
@@ -1158,32 +1174,35 @@ export default function AdminPage() {
         {/* ========================================================================= */}
         {activeTab === 'bookings' && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            <div className="rounded-[2.5rem] bg-white p-6 shadow-sm border border-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 space-y-6">
+            <div className="rounded-3xl bg-white p-7 shadow-xs border border-neutral-200/80 dark:border-neutral-800 dark:bg-neutral-900 space-y-6">
 
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-4 border-neutral-100 dark:border-neutral-800">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-5 border-neutral-100 dark:border-neutral-800">
                 <div>
-                  <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
-                    <Compass className="size-5 text-emerald-600" /> Bookings Pipeline
+                  <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white flex items-center gap-2.5">
+                    <span className="size-8 rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center">
+                      <Compass className="size-4" />
+                    </span>
+                    Bookings Pipeline & Ledger
                   </h2>
-                  <p className="text-xs text-neutral-400 mt-0.5">Full customer reservation ledger, payment proof verification & editing</p>
+                  <p className="text-xs text-neutral-500 font-medium mt-1">Full customer reservation ledger, payment proof verification & status management</p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                  <div className="relative flex items-center flex-1 sm:w-64">
-                    <Search className="size-4 text-neutral-400 absolute left-3" />
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                  <div className="relative flex items-center flex-1 sm:w-72">
+                    <Search className="size-4 text-neutral-400 absolute left-3.5" />
                     <Input
                       type="text"
-                      placeholder="Search name, UTR, or ID..."
+                      placeholder="Search camper, UTR, or Booking ID..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="rounded-xl pl-9 text-xs h-9 border-neutral-200 dark:border-neutral-800"
+                      className="rounded-2xl pl-10 text-xs h-10 border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 shadow-xs"
                     />
                   </div>
 
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="flex h-9 rounded-xl border border-neutral-200 bg-transparent px-3 text-xs ring-offset-background focus:outline-none focus:ring-2 focus:ring-emerald-600/30 dark:border-neutral-800 dark:bg-neutral-900"
+                    className="flex h-10 rounded-2xl border border-neutral-200 bg-white dark:bg-neutral-900 px-3.5 text-xs font-bold text-neutral-700 dark:text-neutral-300 ring-offset-background focus:outline-none focus:ring-2 focus:ring-emerald-600/30 dark:border-neutral-800 shadow-xs cursor-pointer"
                   >
                     <option value="all">All Statuses</option>
                     <option value="approved">Approved</option>
@@ -1194,60 +1213,79 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-2xl border border-neutral-100 dark:border-neutral-800">
+              <div className="overflow-x-auto rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-neutral-950/80 border-b border-neutral-100 dark:border-neutral-800 text-neutral-400 font-extrabold uppercase tracking-wider text-[10px]">
-                      <th className="py-3.5 px-4">Session ID</th>
-                      <th className="py-3.5 px-4">Camper Info</th>
-                      <th className="py-3.5 px-4">Package</th>
-                      <th className="py-3.5 px-4">Travel Date</th>
-                      <th className="py-3.5 px-4 text-center">Guests</th>
-                      <th className="py-3.5 px-4">Amount</th>
-                      <th className="py-3.5 px-4">Payment & UTR</th>
-                      <th className="py-3.5 px-4">Payment Status</th>
-                      <th className="py-3.5 px-4">Booking Status</th>
-                      <th className="py-3.5 px-4 text-right">Actions</th>
+                    <tr className="bg-slate-50/80 dark:bg-neutral-950/80 border-b border-neutral-200/80 dark:border-neutral-800 text-neutral-400 font-extrabold uppercase tracking-wider text-[10px]">
+                      <th className="py-4 px-4">Booking ID</th>
+                      <th className="py-4 px-4">Camper Info</th>
+                      <th className="py-4 px-4">Package</th>
+                      <th className="py-4 px-4">Travel Date</th>
+                      <th className="py-4 px-4 text-center">Guests</th>
+                      <th className="py-4 px-4">Total Amount</th>
+                      <th className="py-4 px-4">Payment & UTR</th>
+                      <th className="py-4 px-4">Payment Status</th>
+                      <th className="py-4 px-4">Booking Status</th>
+                      <th className="py-4 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800 bg-white dark:bg-neutral-900">
+                  <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60 bg-white dark:bg-neutral-900">
                     {filteredBookings.map((b) => {
                       const truncatedId = b.bookingId.length > 14 ? `${b.bookingId.slice(0, 8)}...${b.bookingId.slice(-4)}` : b.bookingId;
                       return (
-                        <tr key={b.bookingId} className="hover:bg-slate-50/70 dark:hover:bg-neutral-800/40 transition-colors">
-                          <td className="py-3.5 px-4 font-mono font-bold text-neutral-800 dark:text-neutral-200">
-                            <span className="inline-block px-2 py-1 rounded-lg bg-slate-100 dark:bg-neutral-800 text-[11px] font-mono font-bold border border-neutral-200 dark:border-neutral-700" title={b.bookingId}>
+                        <tr key={b.bookingId} className="hover:bg-slate-50/80 dark:hover:bg-neutral-800/40 transition-colors">
+                          <td className="py-4 px-4 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-neutral-800 text-[11px] font-mono font-bold text-neutral-800 dark:text-neutral-200 border border-neutral-200/80 dark:border-neutral-700/60" title={b.bookingId}>
                               {truncatedId}
                             </span>
                           </td>
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            <strong className="text-neutral-900 dark:text-white block font-black text-xs leading-tight">{b.fullName}</strong>
-                            <span className="text-[10px] text-neutral-400 font-mono block mt-0.5">{b.mobileNumber}</span>
+
+                          <td className="py-4 px-4 whitespace-nowrap">
+                            <div className="flex items-center gap-3">
+                              <div className="size-9 rounded-2xl bg-neutral-900 text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-sm dark:bg-emerald-600">
+                                {b.fullName ? b.fullName.charAt(0).toUpperCase() : 'C'}
+                              </div>
+                              <div>
+                                <strong className="text-neutral-900 dark:text-white block font-extrabold text-xs leading-tight">{b.fullName}</strong>
+                                <span className="text-[10px] text-neutral-400 font-mono block mt-0.5">{b.mobileNumber}</span>
+                              </div>
+                            </div>
                           </td>
-                          <td className="py-3.5 px-4 text-neutral-700 dark:text-neutral-300 font-medium whitespace-nowrap">
-                            {b.packageName}
+
+                          <td className="py-4 px-4 whitespace-nowrap">
+                            <span className="font-bold text-neutral-800 dark:text-neutral-200">
+                              {b.packageName}
+                            </span>
                           </td>
-                          <td className="py-3.5 px-4 font-bold text-neutral-800 dark:text-neutral-200 whitespace-nowrap">
-                            {b.travelDate}
+
+                          <td className="py-4 px-4 whitespace-nowrap">
+                            <span className="font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                              <CalendarIcon className="size-3.5 text-neutral-400" />
+                              {b.travelDate}
+                            </span>
                           </td>
-                          <td className="py-3.5 px-4 text-center font-bold">
-                            <span className="inline-block px-2 py-0.5 rounded-full bg-slate-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-[11px]">
+
+                          <td className="py-4 px-4 text-center whitespace-nowrap">
+                            <span className="inline-block px-2.5 py-1 rounded-full bg-slate-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-[11px] font-extrabold">
                               {b.adults + b.children}
                             </span>
                           </td>
-                          <td className="py-3.5 px-4 font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap text-sm">
-                            ₹{b.totalAmount.toLocaleString('en-IN')}
+
+                          <td className="py-4 px-4 whitespace-nowrap">
+                            <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">
+                              ₹{b.totalAmount.toLocaleString('en-IN')}
+                            </span>
                           </td>
 
                           {/* PAYMENT & UTR COLUMN WITH SCREENSHOT & DETAILS VIEW */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
+                          <td className="py-4 px-4 whitespace-nowrap">
                             <div className="space-y-1">
                               <span className="font-mono text-[11px] font-extrabold block text-neutral-700 dark:text-neutral-300">
                                 {b.utr ? `UTR: ${b.utr}` : (b.screenshotUrl === 'PAY_ON_SPOT' ? 'Pay on Spot' : 'N/A')}
                               </span>
                               <button
                                 onClick={() => handleViewPaymentDetails(b.bookingId)}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[10px] font-extrabold hover:bg-emerald-100 transition-colors border border-emerald-200/60 dark:border-emerald-900/50"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[10px] font-extrabold hover:bg-emerald-100 transition-colors border border-emerald-200/60 dark:border-emerald-900/50 shadow-2xs"
                               >
                                 <Eye className="size-3" /> View Payment Details
                               </button>
@@ -1255,29 +1293,36 @@ export default function AdminPage() {
                           </td>
 
                           {/* PAYMENT STATUS COLUMN */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                          <td className="py-4 px-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider ${
                               (b.paymentStatus || '').toUpperCase() === 'VERIFIED' || (b.paymentStatus || '').toUpperCase() === 'APPROVED' || (b.paymentStatus || '').toUpperCase() === 'SUCCESS'
-                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900'
+                                ? 'bg-emerald-100/80 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900'
                                 : (b.paymentStatus || '').toUpperCase() === 'REJECTED' || (b.paymentStatus || '').toUpperCase() === 'FAILED'
-                                  ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-400 border border-rose-200 dark:border-rose-900'
-                                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400 border border-amber-200 dark:border-amber-900'
+                                  ? 'bg-rose-100/80 text-rose-800 dark:bg-rose-950 dark:text-rose-400 border border-rose-200 dark:border-rose-900'
+                                  : 'bg-amber-100/80 text-amber-800 dark:bg-amber-950 dark:text-amber-400 border border-amber-200 dark:border-amber-900'
                             }`}>
+                              <span className={`size-1.5 rounded-full ${
+                                (b.paymentStatus || '').toUpperCase() === 'VERIFIED' || (b.paymentStatus || '').toUpperCase() === 'APPROVED' || (b.paymentStatus || '').toUpperCase() === 'SUCCESS'
+                                  ? 'bg-emerald-500'
+                                  : (b.paymentStatus || '').toUpperCase() === 'REJECTED' || (b.paymentStatus || '').toUpperCase() === 'FAILED'
+                                    ? 'bg-rose-500'
+                                    : 'bg-amber-500'
+                              }`} />
                               {b.paymentStatus ? b.paymentStatus.toUpperCase() : 'PENDING'}
                             </span>
                           </td>
 
-                          {/* BOOKING STATUS COLUMN (DROPDOWN ONLY) */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
+                          {/* BOOKING STATUS COLUMN (INTERACTIVE DROPDOWN) */}
+                          <td className="py-4 px-4 whitespace-nowrap">
                             <select
                               value={b.status}
                               onChange={(e) => handleBookingStatusDropdownChange(b.bookingId, e.target.value)}
-                              className={`rounded-xl border px-3 py-1 text-xs font-black cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs h-7.5 ${
+                              className={`rounded-2xl border px-3 py-1.5 text-xs font-black cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs h-9 ${
                                 b.status === 'approved'
-                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/60'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-900'
                                   : b.status === 'rejected'
-                                    ? 'bg-rose-50 text-rose-800 border-rose-200/80 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/60'
-                                    : 'bg-amber-50 text-amber-800 border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/60'
+                                    ? 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-900'
+                                    : 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-900'
                               }`}
                               title="Booking Status Dropdown"
                             >
@@ -1288,23 +1333,23 @@ export default function AdminPage() {
                           </td>
 
                           {/* ACTIONS COLUMN */}
-                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <td className="py-4 px-4 text-right whitespace-nowrap">
                             <div className="inline-flex items-center justify-end gap-1.5">
                               <Button
                                 onClick={() => handleOpenEditModal(b)}
                                 size="sm"
                                 variant="outline"
-                                className="rounded-xl text-[11px] h-7 px-2.5 border-neutral-200 dark:border-neutral-800 font-bold hover:bg-slate-100"
+                                className="rounded-xl text-xs h-8 px-3 border-neutral-200 dark:border-neutral-800 font-extrabold hover:bg-slate-100"
                                 title="Edit details"
                               >
-                                <Edit className="size-3 mr-1" /> Edit
+                                <Edit className="size-3.5 mr-1" /> Edit
                               </Button>
 
                               <Button
                                 onClick={() => handleOpenEmailComposer(b.email, `Booking Update — ${b.bookingId}`, `Hi ${b.fullName},\n\nYour campsite booking status is ${b.status.toUpperCase()}.\n\nTotal Amount: ₹${b.totalAmount}\n\nBest regards,\nValley Base Team`)}
                                 size="sm"
                                 variant="outline"
-                                className="rounded-xl text-[11px] h-7 px-2.5 border-neutral-200 dark:border-neutral-800 font-bold"
+                                className="rounded-xl text-xs h-8 px-3 border-neutral-200 dark:border-neutral-800 font-extrabold"
                                 title="Send email"
                               >
                                 Email
@@ -1314,10 +1359,10 @@ export default function AdminPage() {
                                 onClick={() => handleDeleteBooking(b.bookingId)}
                                 size="sm"
                                 variant="outline"
-                                className="rounded-xl text-[11px] h-7 px-2 text-rose-600 border-rose-200 hover:bg-rose-50 dark:border-rose-950/40 dark:hover:bg-rose-950/30 font-bold"
+                                className="rounded-xl text-xs h-8 px-2.5 text-rose-600 border-rose-200 hover:bg-rose-50 dark:border-rose-950/40 dark:hover:bg-rose-950/30 font-extrabold"
                                 title="Delete Booking"
                               >
-                                <Trash2 className="size-3" />
+                                <Trash2 className="size-3.5" />
                               </Button>
                             </div>
                           </td>
