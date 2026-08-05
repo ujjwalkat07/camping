@@ -114,7 +114,7 @@ export const tokenStorage = {
   },
   clearAuth: async () => {
     try {
-      await axiosInstance.post(`${BACKEND_URL}/api/auth/logout`);
+      await axiosInstance.post('/api/auth/logout');
     } catch {
       // Best effort
     }
@@ -168,7 +168,7 @@ export const adminStorage = {
   }
 };
 
-// Create Axios Instance
+// Create Axios Instance connected directly to backend URL
 export const axiosInstance: AxiosInstance = axios.create({
   baseURL: BACKEND_URL,
   withCredentials: false,
@@ -235,7 +235,7 @@ axiosInstance.interceptors.response.use(
       let newRefreshToken: string | null = null;
 
       try {
-        const refreshRes = await axiosInstance.post(`${BACKEND_URL}/api/auth/refreshtoken`, {
+        const refreshRes = await axiosInstance.post('/api/auth/refreshtoken', {
           refreshToken: refreshToken || '',
         });
         const data = refreshRes.data;
@@ -281,9 +281,13 @@ axiosInstance.interceptors.response.use(
 export async function apiClient<T = any>(endpoint: string, options: ApiOptions = {}): Promise<T> {
   const { requiresAuth, requiresAdmin, token: explicitToken, headers: customHeaders, body, method = 'GET', ...rest } = options;
 
-  const url = endpoint.startsWith('http://') || endpoint.startsWith('https://')
-    ? endpoint
-    : `${BACKEND_URL}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+  let path = endpoint;
+  if (path.startsWith(BACKEND_URL)) {
+    path = path.substring(BACKEND_URL.length);
+  }
+  if (!path.startsWith('/')) {
+    path = '/' + path;
+  }
 
   const requestHeaders: Record<string, string> = { ...(customHeaders as Record<string, string>) };
   if (explicitToken) {
@@ -300,7 +304,7 @@ export async function apiClient<T = any>(endpoint: string, options: ApiOptions =
   }
 
   const config: AxiosRequestConfig = {
-    url,
+    url: path,
     method: method as any,
     headers: requestHeaders,
     data,
@@ -317,9 +321,13 @@ export async function apiFormClient<T = any>(
   requiresAuth = true,
   customToken?: string
 ): Promise<T> {
-  const url = endpoint.startsWith('http://') || endpoint.startsWith('https://')
-    ? endpoint
-    : `${BACKEND_URL}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+  let path = endpoint;
+  if (path.startsWith(BACKEND_URL)) {
+    path = path.substring(BACKEND_URL.length);
+  }
+  if (!path.startsWith('/')) {
+    path = '/' + path;
+  }
 
   const headers: Record<string, string> = {};
 
@@ -328,7 +336,7 @@ export async function apiFormClient<T = any>(
     headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
   }
 
-  const response = await axiosInstance.post(url, formData, {
+  const response = await axiosInstance.post(path, formData, {
     headers: {
       ...headers,
       'Content-Type': 'multipart/form-data',
