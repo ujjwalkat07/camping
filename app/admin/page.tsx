@@ -783,7 +783,7 @@ export default function AdminPage() {
                 </div>
 
                 <div className="space-y-3">
-                  {bookings.slice(0, 5).map((b, idx) => (
+                  {bookings.slice(0, 3).map((b, idx) => (
                     <div key={b.bookingId || idx} className="flex items-center justify-between text-xs p-2 rounded-xl bg-slate-50/50 dark:bg-neutral-950/50 border border-neutral-100 dark:border-neutral-800">
                       <div className="flex items-center gap-2.5">
                         <div className="size-8 rounded-full bg-neutral-900 text-white font-bold text-xs flex items-center justify-center dark:bg-neutral-800 shrink-0">
