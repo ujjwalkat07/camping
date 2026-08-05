@@ -47,37 +47,21 @@ export const tokenStorage = {
       getCookie('auth_token') ||
       getCookie('admin_token') ||
       getCookie('accessToken') ||
-      getCookie('token') ||
-      (typeof window !== 'undefined'
-        ? localStorage.getItem('auth_token') || localStorage.getItem('accessToken')
-        : null)
+      getCookie('token')
     );
   },
   setToken: (token: string) => {
     setCookie('auth_token', token, 7);
-    setCookie('admin_token', token, 7);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('accessToken', token);
-    }
   },
   getRefreshToken: (): string | null => {
     return (
       getCookie('auth_refresh_token') ||
       getCookie('admin_refresh_token') ||
-      getCookie('refreshToken') ||
-      (typeof window !== 'undefined'
-        ? localStorage.getItem('auth_refresh_token') || localStorage.getItem('refreshToken')
-        : null)
+      getCookie('refreshToken')
     );
   },
   setRefreshToken: (token: string) => {
     setCookie('auth_refresh_token', token, 30);
-    setCookie('admin_refresh_token', token, 30);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('auth_refresh_token', token);
-      localStorage.setItem('refreshToken', token);
-    }
   },
   saveBookingId: (bookingId: string) => {
     if (!bookingId) return;
@@ -102,7 +86,7 @@ export const tokenStorage = {
     return [];
   },
   getUser: (): any | null => {
-    const cookieUser = getCookie('auth_user');
+    const cookieUser = getCookie('auth_user') || getCookie('admin_user');
     if (cookieUser) {
       try { return JSON.parse(cookieUser); } catch { /* fall through */ }
     }
@@ -110,7 +94,6 @@ export const tokenStorage = {
   },
   setUser: (user: any) => {
     setCookie('auth_user', JSON.stringify(user), 7);
-    setCookie('admin_user', JSON.stringify(user), 7);
   },
   clearAuth: async () => {
     try {
@@ -124,6 +107,8 @@ export const tokenStorage = {
     deleteCookie('admin_token');
     deleteCookie('admin_refresh_token');
     deleteCookie('admin_user');
+    deleteCookie('accessToken');
+    deleteCookie('refreshToken');
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('auth_refresh_token');
@@ -135,25 +120,18 @@ export const tokenStorage = {
 
 export const adminStorage = {
   getAdminToken: (): string | null => {
-    return getCookie('admin_token') || tokenStorage.getToken();
+    return tokenStorage.getToken();
   },
   setAdminToken: (token: string) => {
     tokenStorage.setToken(token);
   },
   getAdminRefreshToken: (): string | null => {
-    return getCookie('admin_refresh_token') || tokenStorage.getRefreshToken();
+    return tokenStorage.getRefreshToken();
   },
   setAdminRefreshToken: (token: string) => {
     tokenStorage.setRefreshToken(token);
   },
   getAdminUser: (): any | null => {
-    const adminStr = getCookie('admin_user');
-    if (adminStr) {
-      try {
-        const parsed = JSON.parse(adminStr);
-        if (isAdminUser(parsed)) return parsed;
-      } catch { }
-    }
     const user = tokenStorage.getUser();
     if (user && isAdminUser(user)) {
       return user;
@@ -282,8 +260,8 @@ export async function apiClient<T = any>(endpoint: string, options: ApiOptions =
   const { requiresAuth, requiresAdmin, token: explicitToken, headers: customHeaders, body, method = 'GET', ...rest } = options;
 
   let path = endpoint;
-  if (path.startsWith(BACKEND_URL)) {
-    path = path.substring(BACKEND_URL.length);
+  if (path.startsWith(String(BACKEND_URL))) {
+    path = path.substring(String(BACKEND_URL).length);
   }
   if (!path.startsWith('/')) {
     path = '/' + path;
@@ -322,8 +300,8 @@ export async function apiFormClient<T = any>(
   customToken?: string
 ): Promise<T> {
   let path = endpoint;
-  if (path.startsWith(BACKEND_URL)) {
-    path = path.substring(BACKEND_URL.length);
+  if (path.startsWith(String(BACKEND_URL))) {
+    path = path.substring(String(BACKEND_URL).length);
   }
   if (!path.startsWith('/')) {
     path = '/' + path;
