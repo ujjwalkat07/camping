@@ -9,8 +9,11 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { UserPlus, Mail, Phone, Lock, LogIn, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
+import { useAuth } from "@/hooks/useAuth";
+
 function SignupContent() {
   const router = useRouter();
+  const { user, refreshAuth } = useAuth();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams ? searchParams.get("redirect") || "/" : "/";
 
@@ -23,11 +26,10 @@ function SignupContent() {
 
   // If user is already logged in, redirect out
   useEffect(() => {
-    const currentUser = api.getCurrentUser();
-    if (currentUser) {
+    if (user) {
       router.push(redirectUrl);
     }
-  }, [redirectUrl, router]);
+  }, [user, redirectUrl, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,9 +56,7 @@ function SignupContent() {
       // The /api/auth/signup route handles both registration and login,
       // and sets httpOnly cookies for tokens server-side.
       await api.register(email.trim(), password, cleanPhone);
-
-      // Small delay to ensure cookies are fully written before redirect
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await refreshAuth();
       router.push(redirectUrl);
     } catch (err: any) {
       let message = err.message || "Registration failed. Please try again.";

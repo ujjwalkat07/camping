@@ -6,7 +6,7 @@ export function Footer() {
     <footer className="relative border-t border-neutral-100 bg-neutral-900 text-neutral-400 dark:border-neutral-800 dark:bg-black">
       {/* Background Forest Silhouette Overlay Option (We can do this with styling or nice typography) */}
       <div className="mx-auto max-w-7xl px-4 py-12 md:px-8 md:py-16">
-        <div className="grid gap-8 md:grid-cols-4">
+        <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
           
           {/* Logo & Description */}
           <div className="md:col-span-1">

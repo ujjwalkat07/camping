@@ -1,11 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import axios from 'axios';
 import { api, User } from '@/services/api';
-import { tokenStorage, adminStorage } from '@/lib/api-client';
+import { tokenStorage, adminStorage, axiosInstance } from '@/lib/api-client';
 import { isAdminUser } from '@/lib/utils';
-import { BACKEND_URL } from '@/lib/constants';
 
 interface AuthContextType {
   user: User | null;
@@ -32,21 +30,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = tokenStorage.getToken();
     const refreshToken = tokenStorage.getRefreshToken();
 
-    // If access token is missing but refresh token exists, attempt to regenerate tokens
+    // If access token is missing but refresh token exists, attempt to regenerate tokens directly from backend
     if (!token && refreshToken) {
       try {
-        let newAccessToken: string | null = null;
-        let newRefreshToken: string | null = null;
-
-        try {
-          const res = await axios.post('/api/auth/refreshtoken', { refreshToken });
-          newAccessToken = res.data?.accessToken || res.data?.token;
-          newRefreshToken = res.data?.refreshToken || refreshToken;
-        } catch {
-          const directRes = await axios.post(`${BACKEND_URL}/api/auth/refreshtoken`, { refreshToken });
-          newAccessToken = directRes.data?.accessToken || directRes.data?.token;
-          newRefreshToken = directRes.data?.refreshToken || refreshToken;
-        }
+        const res = await axiosInstance.post('/api/auth/refreshtoken', { refreshToken });
+        const newAccessToken = res.data?.accessToken || res.data?.token;
+        const newRefreshToken = res.data?.refreshToken || refreshToken;
 
         if (newAccessToken) {
           tokenStorage.setToken(newAccessToken);

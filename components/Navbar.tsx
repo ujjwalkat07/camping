@@ -167,42 +167,62 @@ export function Navbar() {
 
       {/* Mobile Navigation Dropdown */}
       {isOpen && (
-        <div className="border-t border-neutral-100 bg-white px-4 py-4 shadow-lg dark:border-neutral-800 dark:bg-neutral-950 md:hidden animate-in slide-in-from-top duration-250">
-          <nav className="flex flex-col gap-4">
-            <Link href="/" onClick={() => setIsOpen(false)} className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
+        <div className="border-t border-neutral-100 bg-white/95 backdrop-blur-lg px-5 py-5 shadow-2xl dark:border-neutral-800 dark:bg-neutral-950/95 md:hidden animate-in slide-in-from-top duration-250">
+          <nav className="flex flex-col gap-2.5">
+            <Link href="/" onClick={() => setIsOpen(false)} className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 py-2 px-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
               Home
             </Link>
-            <Link href="/packages" onClick={() => setIsOpen(false)} className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
+            <Link href="/packages" onClick={() => setIsOpen(false)} className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 py-2 px-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
               Explore Packages
             </Link>
-            <Link href="/gallery" onClick={() => setIsOpen(false)} className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
+            <Link href="/gallery" onClick={() => setIsOpen(false)} className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 py-2 px-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
               Gallery
             </Link>
-            <Link href="/about" onClick={() => setIsOpen(false)} className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
+            <Link href="/about" onClick={() => setIsOpen(false)} className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 py-2 px-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
               About Us
             </Link>
-            <Link href="/faq" onClick={() => setIsOpen(false)} className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
+            <Link href="/faq" onClick={() => setIsOpen(false)} className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 py-2 px-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
               FAQs
             </Link>
-            <Link href="/contact" onClick={() => setIsOpen(false)} className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
+            <Link href="/contact" onClick={() => setIsOpen(false)} className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 py-2 px-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
               Contact
             </Link>
             
-            <hr className="border-neutral-100 dark:border-neutral-800" />
+            <hr className="border-neutral-100 dark:border-neutral-800 my-1" />
             
             {user ? (
-              <>
-                <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">
-                  Dashboard
-                </Link>
-                <button onClick={handleLogout} className="text-left text-sm font-semibold text-destructive">
-                  Log Out ({user.name})
-                </button>
-              </>
+              <div className="flex flex-col gap-2 pt-1">
+                <div className="flex items-center gap-2.5 px-3 py-1.5">
+                  <div className="size-7 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold dark:bg-emerald-950/60 dark:text-emerald-350">
+                    {user.name[0].toUpperCase()}
+                  </div>
+                  <div className="truncate">
+                    <span className="text-xs font-bold text-neutral-800 dark:text-neutral-100 block truncate">{user.name}</span>
+                    <span className="text-[10px] text-neutral-400 block truncate">{user.email}</span>
+                  </div>
+                </div>
+                <Button asChild variant="outline" className="w-full justify-start rounded-xl text-xs font-bold h-10">
+                  <Link href="/dashboard" onClick={() => setIsOpen(false)} className="flex items-center gap-2">
+                    <UserIcon className="size-4 text-emerald-600" /> My Dashboard
+                  </Link>
+                </Button>
+                <Button variant="ghost" onClick={handleLogout} className="w-full justify-start rounded-xl text-xs font-bold h-10 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30">
+                  <LogOut className="size-4" /> Sign Out
+                </Button>
+              </div>
             ) : (
-              <Link href="/login" onClick={() => setIsOpen(false)} className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                Sign In
-              </Link>
+              <div className="flex flex-col gap-2.5 pt-2">
+                <Button asChild variant="outline" className="w-full justify-center rounded-xl font-semibold h-10">
+                  <Link href="/login" onClick={() => setIsOpen(false)}>
+                    Sign In
+                  </Link>
+                </Button>
+                <Button asChild className="w-full justify-center rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md shadow-emerald-600/20 h-10">
+                  <Link href="/signup" onClick={() => setIsOpen(false)}>
+                    Sign Up / Register
+                  </Link>
+                </Button>
+              </div>
             )}
           </nav>
         </div>

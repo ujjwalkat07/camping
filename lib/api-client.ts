@@ -114,7 +114,7 @@ export const tokenStorage = {
   },
   clearAuth: async () => {
     try {
-      await axios.post('/api/auth/logout');
+      await axiosInstance.post('/api/auth/logout');
     } catch {
       // Best effort
     }
@@ -235,27 +235,14 @@ axiosInstance.interceptors.response.use(
       let newRefreshToken: string | null = null;
 
       try {
-        // 1. Try local Next.js route first
-        const refreshRes = await axios.post('/api/auth/refreshtoken', {
+        const refreshRes = await axiosInstance.post('/api/auth/refreshtoken', {
           refreshToken: refreshToken || '',
         });
         const data = refreshRes.data;
         newAccessToken = data?.accessToken || data?.token;
         newRefreshToken = data?.refreshToken || refreshToken;
-      } catch {
-        // 2. Direct backend fallback if local route fails
-        if (refreshToken) {
-          try {
-            const directRes = await axios.post(`${BACKEND_URL}/api/auth/refreshtoken`, {
-              refreshToken,
-            });
-            const data = directRes.data;
-            newAccessToken = data?.accessToken || data?.token;
-            newRefreshToken = data?.refreshToken || refreshToken;
-          } catch (directErr) {
-            console.error('Refresh token request failed:', directErr);
-          }
-        }
+      } catch (refreshErr) {
+        console.error('Refresh token request failed:', refreshErr);
       }
 
       if (newAccessToken) {
