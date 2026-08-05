@@ -2,15 +2,16 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api } from "@/services/api";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { ShieldAlert, Mail, Lock, UserPlus, ArrowLeft, KeyRound } from "lucide-react";
+import { ShieldAlert, Mail, Lock, KeyRound, ArrowLeft, UserPlus } from "lucide-react";
 import Link from "next/link";
 
 function AdminLoginContent() {
   const router = useRouter();
+  const { adminLogin, isAdmin } = useAuth();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams ? searchParams.get("redirect") || "/admin" : "/admin";
 
@@ -22,8 +23,7 @@ function AdminLoginContent() {
 
   // If user is already logged in as Admin, redirect straight to /admin
   useEffect(() => {
-    const adminUser = api.getAdminUser();
-    if (adminUser) {
+    if (isAdmin) {
       router.push(redirectUrl);
       return;
     }
@@ -32,7 +32,7 @@ function AdminLoginContent() {
     if (paramEmail) {
       setEmail(paramEmail);
     }
-  }, [redirectUrl, router, searchParams]);
+  }, [isAdmin, redirectUrl, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,8 +49,7 @@ function AdminLoginContent() {
 
     setIsLoading(true);
     try {
-      await api.adminLogin(email.trim(), password);
-      window.dispatchEvent(new Event("storage"));
+      await adminLogin(email.trim(), password);
       router.push(redirectUrl);
     } catch (err: any) {
       setError(err.message || "Invalid admin credentials. Please verify your credentials.");

@@ -13,34 +13,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState, useEffect } from "react";
 import { api, User } from "@/services/api";
+import { useAuth } from "@/hooks/useAuth";
 
 export function Navbar() {
   const router = useRouter();
+  const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
   const [isExploreOpen, setIsExploreOpen] = useState(false);
 
-  // Sync user profile state — re-check on mount, storage events, and page focus
-  useEffect(() => {
-    const syncAuth = () => {
-      setUser(api.getCurrentUser());
-    };
-
-    syncAuth();
-
-    window.addEventListener("storage", syncAuth);
-    window.addEventListener("focus", syncAuth);
-
-    return () => {
-      window.removeEventListener("storage", syncAuth);
-      window.removeEventListener("focus", syncAuth);
-    };
-  }, []);
-
-  const handleLogout = () => {
-    api.logout();
-    setUser(null);
-    window.dispatchEvent(new Event("storage"));
+  const handleLogout = async () => {
+    await logout();
     router.push("/");
     setIsOpen(false);
   };

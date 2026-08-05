@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { isAdminUser } from '@/lib/utils';
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -9,6 +10,8 @@ export function proxy(request: NextRequest) {
   const adminUserCookie = request.cookies.get('admin_user')?.value;
   const authToken = request.cookies.get('auth_token')?.value;
   const adminToken = request.cookies.get('admin_token')?.value;
+  const authRefreshToken = request.cookies.get('auth_refresh_token')?.value || request.cookies.get('refreshToken')?.value;
+  const adminRefreshToken = request.cookies.get('admin_refresh_token')?.value;
 
   let authUser: any = null;
   let adminUser: any = null;
@@ -26,41 +29,27 @@ export function proxy(request: NextRequest) {
   }
 
   const currentUser = adminUser || authUser;
-  const hasToken = !!(authToken || adminToken);
+  // Consider user authenticated if either access token OR refresh token exists
+  const hasToken = !!(authToken || adminToken || authRefreshToken || adminRefreshToken);
 
-  const checkIsAdmin = (u: any) => {
-    if (!u) return false;
-    const roles = Array.isArray(u.roles) ? u.roles : [];
-    const roleStr = typeof u.role === 'string' ? u.role.toUpperCase() : '';
-    return (
-      roles.includes('ROLE_ADMIN') ||
-      roles.includes('admin') ||
-      roles.includes('ADMIN') ||
-      roleStr === 'ADMIN' ||
-      roleStr === 'ROLE_ADMIN'
-    );
-  };
-
-  const isAdmin = checkIsAdmin(currentUser);
+  const isAdmin = isAdminUser(currentUser);
 
   // 1. Protect Admin Dashboard Routes (/admin, excluding /admin/login)
   if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
-    if (!hasToken || !currentUser) {
+    if (!hasToken && !currentUser) {
       return NextResponse.redirect(new URL('/admin/login', request.url));
     }
-    if (!isAdmin) {
-      // User with ROLE_USER trying to access admin dashboard -> redirect to user dashboard
+    if (currentUser && !isAdmin) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   }
 
   // 2. Protect User Dashboard Routes (/dashboard)
   if (pathname.startsWith('/dashboard')) {
-    if (!hasToken || !currentUser) {
+    if (!hasToken && !currentUser) {
       return NextResponse.redirect(new URL('/login?redirect=/dashboard', request.url));
     }
-    if (isAdmin) {
-      // Admin trying to access user dashboard -> redirect to admin dashboard
+    if (currentUser && isAdmin) {
       return NextResponse.redirect(new URL('/admin', request.url));
     }
   }

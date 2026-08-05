@@ -1,4 +1,5 @@
 import { apiClient, apiFormClient, tokenStorage, adminStorage, setCookie, ApiResponse } from '@/lib/api-client';
+import { isAdminUser } from '@/lib/utils';
 
 export interface Package {
   id: string;
@@ -339,76 +340,70 @@ export function createPlaceholderImageFile(utrText: string = "pay on spot", file
 
 export const api = {
   // --- Authentication Operations ---
-  register: async (email: string, password: string, mobileNumber: string): Promise<ApiResponse> => {
+  register: async (email: string, password?: string, name?: string, mobileNumber?: string): Promise<any> => {
     try {
-      const res = await fetch('/api/auth/signup', {
+      const data = await apiClient<any>('/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, mobileNumber }),
+        body: JSON.stringify({ email, password, name, mobileNumber }),
       });
 
-      const data = await res.json();
+      const token = data.token || data.accessToken;
+      const refreshToken = data.refreshToken;
+      if (token) tokenStorage.setToken(token);
+      if (refreshToken) tokenStorage.setRefreshToken(refreshToken);
 
-      if (!res.ok || data.success === false) {
-        const msg = data.message || 'Registration failed';
-        if (msg.includes('conflicts with existing data') || msg.includes('already exists')) {
-          throw new Error('An account with this email address or mobile number already exists. Please log in instead.');
-        }
-        throw new Error(msg);
-      }
-
-      // Tokens are set as cookies server-side by the API route.
-      // Just save user info for immediate UI access.
       if (data.user) {
         tokenStorage.setUser(data.user);
       }
 
       return data;
     } catch (err: any) {
-      throw new Error(err.message || 'Registration failed');
+      const msg = err.message || 'Registration failed';
+      if (msg.includes('conflicts with existing data') || msg.includes('already exists')) {
+        throw new Error('An account with this email address or mobile number already exists. Please log in instead.');
+      }
+      throw new Error(msg);
     }
   },
 
   login: async (email: string, password?: string, name?: string): Promise<User> => {
-    if (password) {
-      try {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok || data.success === false) {
-          throw new Error(data.message || 'Invalid email or password');
-        }
-
-        // Tokens are set as cookies server-side by the API route.
-
-        const userObj: User = data.user || {
-          id: 'unknown',
-          name: name || email.split('@')[0],
-          email: email,
-          roles: [],
-        };
-
-        tokenStorage.setUser(userObj);
-
-        return userObj;
-      } catch (err: any) {
-        console.warn('Login failed:', err.message);
-        throw new Error('Invalid email address or password. Please verify your credentials.');
-      }
+    if (!password) {
+      throw new Error('Password is required to log in.');
     }
 
-    throw new Error('Password is required to log in.');
+    try {
+      const data = await apiClient<any>('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+
+      const token = data.token || data.accessToken;
+      const refreshToken = data.refreshToken;
+
+      if (token) {
+        tokenStorage.setToken(token);
+      }
+      if (refreshToken) {
+        tokenStorage.setRefreshToken(refreshToken);
+      }
+
+      const userObj: User = data.user || {
+        id: String(data.id || 'unknown'),
+        name: name || data.name || email.split('@')[0],
+        email: email,
+        roles: data.roles || [],
+      };
+
+      tokenStorage.setUser(userObj);
+      return userObj;
+    } catch (err: any) {
+      console.warn('Login failed:', err.message);
+      throw new Error(err.message || 'Invalid email address or password. Please verify your credentials.');
+    }
   },
 
   logout: async () => {
     try {
-      // This calls the Next.js API route which clears httpOnly cookies
-      // and also calls the backend logout endpoint
       await tokenStorage.clearAuth();
     } catch {
       // Ignore errors — clearAuth already does best-effort cleanup
@@ -425,42 +420,37 @@ export const api = {
       throw new Error('Password is required for admin authentication');
     }
 
-    const res = await fetch('/api/auth/login', {
+    const data = await apiClient<any>('/api/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
 
-    const data = await res.json();
+    const token = data.token || data.accessToken;
+    const refreshToken = data.refreshToken;
 
-    if (!res.ok || data.success === false) {
-      throw new Error(data.message || 'Invalid admin email or password');
+    if (token) {
+      tokenStorage.setToken(token);
+    }
+    if (refreshToken) {
+      tokenStorage.setRefreshToken(refreshToken);
     }
 
-    const userObj = data.user;
-    if (!userObj) {
-      throw new Error('User information not received from server');
-    }
+    const userObj = data.user || {
+      id: String(data.id || 'admin'),
+      name: data.name || email.split('@')[0],
+      email: email,
+      roles: data.roles || [],
+    };
 
-    const roles: string[] = Array.isArray(userObj.roles) ? userObj.roles : [];
-    const roleStr = typeof userObj.role === 'string' ? userObj.role.toUpperCase() : '';
-
-    const isAdmin =
-      roles.includes('ROLE_ADMIN') ||
-      roles.includes('admin') ||
-      roles.includes('ADMIN') ||
-      roleStr === 'ADMIN' ||
-      roleStr === 'ROLE_ADMIN';
+    const isAdmin = isAdminUser(userObj);
 
     if (!isAdmin) {
       throw new Error('Access denied. Administrator privileges (ROLE_ADMIN) are required to access the admin portal.');
     }
 
-    const adminRoles = Array.from(new Set([...roles, 'ROLE_ADMIN', 'admin']));
-
     const adminObj: User = {
       ...userObj,
-      roles: adminRoles,
+      roles: Array.from(new Set([...(Array.isArray(userObj.roles) ? userObj.roles : []), 'ROLE_ADMIN'])),
     };
 
     adminStorage.setAdminUser(adminObj);
@@ -468,24 +458,22 @@ export const api = {
   },
 
   adminRegister: async (email: string, password: string, mobileNumber: string): Promise<ApiResponse> => {
-    const res = await fetch('/api/auth/signup', {
+    const data = await apiClient<any>('/api/auth/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, mobileNumber }),
     });
 
-    const data = await res.json();
-
-    if (!res.ok || data.success === false) {
-      throw new Error(data.message || 'Admin registration failed');
-    }
+    const token = data.token || data.accessToken;
+    const refreshToken = data.refreshToken;
+    if (token) tokenStorage.setToken(token);
+    if (refreshToken) tokenStorage.setRefreshToken(refreshToken);
 
     const adminObj: User = {
       id: data.user?.id || `admin-${Date.now()}`,
       name: data.user?.name || email.split('@')[0],
       email: data.user?.email || email,
       phoneNumber: mobileNumber,
-      roles: ['ROLE_ADMIN', 'admin'],
+      roles: ['ROLE_ADMIN'],
     };
 
     adminStorage.setAdminUser(adminObj);

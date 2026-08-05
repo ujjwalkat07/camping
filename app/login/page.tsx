@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/services/api";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
@@ -11,6 +12,7 @@ import Link from "next/link";
 
 function LoginContent() {
   const router = useRouter();
+  const { login, user } = useAuth();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams ? searchParams.get("redirect") || "/" : "/";
 
@@ -29,11 +31,10 @@ function LoginContent() {
 
   // If user is already logged in, redirect out
   useEffect(() => {
-    const currentUser = api.getCurrentUser();
-    if (currentUser) {
+    if (user) {
       router.push(redirectUrl);
     }
-  }, [redirectUrl, router]);
+  }, [user, redirectUrl, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,10 +55,7 @@ function LoginContent() {
           return;
         }
 
-        await api.login(email.trim(), password);
-
-        // Small delay to ensure cookies are fully written before redirect
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await login(email.trim(), password);
         router.push(redirectUrl);
       } else if (mode === "forgot") {
         if (!otpSent) {
