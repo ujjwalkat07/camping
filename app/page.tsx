@@ -18,7 +18,7 @@ export default function Home() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
-  
+
   const [selectedCity, setSelectedCity] = useState("Ghangaria");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeImage, setActiveImage] = useState<GalleryItem | null>(null);
@@ -61,20 +61,21 @@ export default function Home() {
 
   return (
     <div className="space-y-16 pb-16">
-      
+
       {/* 1. HERO BANNER SECTION (Inspired by screenshot) */}
       <section className="mx-auto max-w-8xl px-4 pt-6 md:px-8">
         <div className="relative overflow-hidden rounded-[2.5rem] bg-neutral-900 shadow-xl shadow-neutral-900/10">
-          
+
           {/* Hero background image */}
-          <div className="absolute inset-0 bg-cover bg-center opacity-70 mix-blend-overlay" style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1600&q=80')"
+          <div className="absolute inset-0 bg-cover bg-center opacity-40" style={{
+            backgroundImage: "url('/image.png')"
           }} />
-          
+          <div className="absolute inset-0 bg-gradient-to-r from-neutral-950/85 via-neutral-950/50 to-neutral-950/20" />
+
           <div className="relative z-10 flex flex-col justify-between p-8 md:p-16 min-h-[550px]">
-            
+
             {/* Header badges / Small metadata inside banner */}
-            <div className="flex justify-between items-start">
+            <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-full bg-white/20 backdrop-blur-md px-3.5 py-1 text-xs font-semibold text-white">
                 🗻 Uttarakhand Alpine Camps
               </span>
@@ -82,37 +83,27 @@ export default function Home() {
 
             {/* Core Titles */}
             <div className="max-w-2xl mt-8">
+              <p className="text-xs sm:text-sm font-bold uppercase tracking-widest text-emerald-400 mb-3 flex items-center gap-2">
+                <span className="h-0.5 w-6 bg-emerald-400 rounded-full inline-block"></span>
+                Adventure Starts Where the Road Ends
+              </p>
               <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl leading-[1.1] mb-4">
                 Find your perfect <br />
                 <span className="text-emerald-400">camping spot</span>
               </h1>
-              <p className="text-sm md:text-base text-neutral-200 max-w-lg leading-relaxed mb-8">
-                Experience the untamed beauty of Ghangaria and the Valley of Flowers. Wake up to misty mountain views, explore colorful floral fields, and rest in warm premium Swiss cottage tents.
-              </p>
 
               {/* Glassmorphic Search Bar */}
-              <div className="flex flex-col sm:flex-row items-center gap-2 max-w-md rounded-2xl bg-white/10 backdrop-blur-md p-2 border border-white/20">
-                <div className="relative w-full flex items-center pl-3">
-                  <Search className="size-4 text-neutral-300 absolute left-3" />
-                  <input
-                    type="text"
-                    placeholder="Search by package, stay, or itinerary..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-transparent pl-8 pr-3 py-2 text-sm text-white placeholder-neutral-300 outline-none"
-                  />
-                </div>
-                <Button asChild className="w-full sm:w-auto rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 font-semibold">
-                  <Link href={`/packages?q=${searchQuery}`}>
-                    Search
-                  </Link>
-                </Button>
-              </div>
+              <Button asChild className="w-full sm:w-auto rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-6 font-semibold mt-5">
+                <Link href={`/packages`}>
+                  Explore Packages
+                </Link>
+                <ArrowRight className="ml-2 size-4" />
+              </Button>
             </div>
 
             {/* Banner Footer Grid: Badges & Overlay Cards */}
             <div className="mt-12 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-              
+
               {/* Bottom-left Camper Badges */}
               <div className="flex items-center gap-3 rounded-2xl bg-white/10 backdrop-blur-md px-4 py-3 border border-white/20">
                 <div className="flex -space-x-2">
@@ -345,7 +336,7 @@ export default function Home() {
       {/* 8. CONTACT SECTION */}
       <section className="mx-auto max-w-7xl px-4 md:px-8">
         <div className="grid gap-8 lg:grid-cols-3 items-start">
-          
+
           {/* Details column */}
           <div className="lg:col-span-1 space-y-6">
             <div>
