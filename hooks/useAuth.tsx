@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { api, User } from '@/services/api';
 import { tokenStorage, adminStorage, axiosInstance } from '@/lib/api-client';
 import { isAdminUser } from '@/lib/utils';
+import { BACKEND_URL } from '@/lib/constants';
 
 interface AuthContextType {
   user: User | null;
@@ -33,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // If access token is missing but refresh token exists, attempt to regenerate tokens directly from backend
     if (!token && refreshToken) {
       try {
-        const res = await axiosInstance.post('/api/auth/refreshtoken', { refreshToken });
+        const res = await axiosInstance.post(`${BACKEND_URL}/api/auth/refreshtoken`, { refreshToken });
         const newAccessToken = res.data?.accessToken || res.data?.token;
         const newRefreshToken = res.data?.refreshToken || refreshToken;
 

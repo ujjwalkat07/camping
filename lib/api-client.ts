@@ -114,7 +114,7 @@ export const tokenStorage = {
   },
   clearAuth: async () => {
     try {
-      await axiosInstance.post('/api/auth/logout');
+      await axiosInstance.post(`${BACKEND_URL}/api/auth/logout`);
     } catch {
       // Best effort
     }
@@ -235,7 +235,7 @@ axiosInstance.interceptors.response.use(
       let newRefreshToken: string | null = null;
 
       try {
-        const refreshRes = await axiosInstance.post('/api/auth/refreshtoken', {
+        const refreshRes = await axiosInstance.post(`${BACKEND_URL}/api/auth/refreshtoken`, {
           refreshToken: refreshToken || '',
         });
         const data = refreshRes.data;
@@ -281,7 +281,9 @@ axiosInstance.interceptors.response.use(
 export async function apiClient<T = any>(endpoint: string, options: ApiOptions = {}): Promise<T> {
   const { requiresAuth, requiresAdmin, token: explicitToken, headers: customHeaders, body, method = 'GET', ...rest } = options;
 
-  const url = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = endpoint.startsWith('http://') || endpoint.startsWith('https://')
+    ? endpoint
+    : `${BACKEND_URL}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
 
   const requestHeaders: Record<string, string> = { ...(customHeaders as Record<string, string>) };
   if (explicitToken) {
@@ -315,7 +317,10 @@ export async function apiFormClient<T = any>(
   requiresAuth = true,
   customToken?: string
 ): Promise<T> {
-  const url = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = endpoint.startsWith('http://') || endpoint.startsWith('https://')
+    ? endpoint
+    : `${BACKEND_URL}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+
   const headers: Record<string, string> = {};
 
   const token = customToken || tokenStorage.getToken();
