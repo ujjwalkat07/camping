@@ -40,7 +40,7 @@ export default function Home() {
         setFaqs(fqList.slice(0, 4)); // Show first 4 on home
         setGallery(galList.slice(0, 4)); // Show first 4 on home
       } catch (err) {
-        console.error("Error loading home page data:", err);
+        //error("Error loading home page data:", err);
       } finally {
         setIsLoading(false);
       }

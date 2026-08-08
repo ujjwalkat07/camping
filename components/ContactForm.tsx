@@ -25,7 +25,7 @@ export function ContactForm() {
   const validate = () => {
     const tempErrors: Record<string, string> = {};
     if (!formData.name.trim()) tempErrors.name = "Full name is required";
-    
+
     if (!formData.email.trim()) {
       tempErrors.email = "Email address is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -73,7 +73,7 @@ export function ContactForm() {
         setSubmitError(res.message || "Failed to send message. Please try again.");
       }
     } catch (error: any) {
-      console.error(error);
+      //error(error);
       setSubmitError(error.message || "Submission failed. Please try again.");
     } finally {
       setIsLoading(false);
@@ -99,14 +99,14 @@ export function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 rounded-[2rem] border border-neutral-100 bg-white p-6 shadow-md dark:border-neutral-800 dark:bg-neutral-900 md:p-8">
-      
+
       {submitError && (
         <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-3.5 flex items-start gap-2.5 text-xs animate-in fade-in duration-200">
           <AlertCircle className="size-4 shrink-0 text-destructive mt-0.5" />
           <span className="text-destructive font-medium">{submitError}</span>
         </div>
       )}
-      
+
       {/* Name Input */}
       <div className="space-y-1.5">
         <label className="text-xs font-semibold text-neutral-600 dark:text-neutral-400">Full Name</label>
@@ -116,9 +116,8 @@ export function ContactForm() {
           placeholder="e.g. Rahul Sen"
           value={formData.name}
           onChange={handleChange}
-          className={`rounded-xl border border-neutral-200 dark:border-neutral-800 h-10 px-3.5 focus-visible:ring-emerald-600/30 ${
-            errors.name ? "border-destructive focus-visible:ring-destructive/30" : ""
-          }`}
+          className={`rounded-xl border border-neutral-200 dark:border-neutral-800 h-10 px-3.5 focus-visible:ring-emerald-600/30 ${errors.name ? "border-destructive focus-visible:ring-destructive/30" : ""
+            }`}
         />
         {errors.name && <p className="text-[11px] font-semibold text-destructive">{errors.name}</p>}
       </div>
@@ -132,9 +131,8 @@ export function ContactForm() {
           placeholder="e.g. rahul@example.com"
           value={formData.email}
           onChange={handleChange}
-          className={`rounded-xl border border-neutral-200 dark:border-neutral-800 h-10 px-3.5 focus-visible:ring-emerald-600/30 ${
-            errors.email ? "border-destructive focus-visible:ring-destructive/30" : ""
-          }`}
+          className={`rounded-xl border border-neutral-200 dark:border-neutral-800 h-10 px-3.5 focus-visible:ring-emerald-600/30 ${errors.email ? "border-destructive focus-visible:ring-destructive/30" : ""
+            }`}
         />
         {errors.email && <p className="text-[11px] font-semibold text-destructive">{errors.email}</p>}
       </div>
@@ -148,9 +146,8 @@ export function ContactForm() {
           placeholder="e.g. 9876543210"
           value={formData.phone}
           onChange={handleChange}
-          className={`rounded-xl border border-neutral-200 dark:border-neutral-800 h-10 px-3.5 focus-visible:ring-emerald-600/30 ${
-            errors.phone ? "border-destructive focus-visible:ring-destructive/30" : ""
-          }`}
+          className={`rounded-xl border border-neutral-200 dark:border-neutral-800 h-10 px-3.5 focus-visible:ring-emerald-600/30 ${errors.phone ? "border-destructive focus-visible:ring-destructive/30" : ""
+            }`}
         />
         {errors.phone && <p className="text-[11px] font-semibold text-destructive">{errors.phone}</p>}
       </div>
@@ -164,9 +161,8 @@ export function ContactForm() {
           value={formData.message}
           onChange={handleChange}
           rows={4}
-          className={`rounded-xl border border-neutral-200 dark:border-neutral-800 px-3.5 focus-visible:ring-emerald-600/30 ${
-            errors.message ? "border-destructive focus-visible:ring-destructive/30" : ""
-          }`}
+          className={`rounded-xl border border-neutral-200 dark:border-neutral-800 px-3.5 focus-visible:ring-emerald-600/30 ${errors.message ? "border-destructive focus-visible:ring-destructive/30" : ""
+            }`}
         />
         {errors.message && <p className="text-[11px] font-semibold text-destructive">{errors.message}</p>}
       </div>

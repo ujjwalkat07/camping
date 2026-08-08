@@ -26,7 +26,7 @@ export default function PackageDetailsPage() {
         const data = await api.getPackageById(id);
         setPkg(data);
       } catch (err) {
-        console.error("Error loading package details:", err);
+        //error("Error loading package details:", err);
       } finally {
         setIsLoading(false);
       }
@@ -60,17 +60,17 @@ export default function PackageDetailsPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 md:px-8">
-      
+
       {/* Back Button */}
       <Link href="/packages" className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500 hover:text-emerald-600 transition-colors mb-6">
         <ArrowLeft className="size-4" /> Back to Packages Catalog
       </Link>
 
       <div className="grid gap-8 lg:grid-cols-3">
-        
+
         {/* Left Column (Images, description, itinerary, details) */}
         <div className="lg:col-span-2 space-y-8">
-          
+
           {/* Title Header */}
           <div>
             <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-400 dark:text-neutral-500 mb-1">
@@ -91,7 +91,7 @@ export default function PackageDetailsPage() {
                 className="h-full w-full object-cover transition-all duration-300"
               />
             </div>
-            
+
             {/* Small image previews list */}
             {pkg.images.length > 1 && (
               <div className="flex gap-3">
@@ -99,11 +99,10 @@ export default function PackageDetailsPage() {
                   <button
                     key={idx}
                     onClick={() => setActiveImageIndex(idx)}
-                    className={`relative overflow-hidden rounded-xl size-16 sm:size-20 border-2 transition-all ${
-                      idx === activeImageIndex
+                    className={`relative overflow-hidden rounded-xl size-16 sm:size-20 border-2 transition-all ${idx === activeImageIndex
                         ? "border-emerald-600 scale-[1.03]"
                         : "border-transparent opacity-75 hover:opacity-100"
-                    }`}
+                      }`}
                   >
                     <img src={img} alt="preview" className="h-full w-full object-cover" />
                   </button>
@@ -122,7 +121,7 @@ export default function PackageDetailsPage() {
 
           {/* Key details icons grid */}
           <div className="grid gap-4 grid-cols-2 sm:grid-cols-4 bg-slate-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800/80 p-5 rounded-[2rem]">
-            
+
             <div className="flex flex-col items-center text-center p-2">
               <Clock className="size-5 text-emerald-600 mb-1.5" />
               <span className="text-[10px] text-neutral-400 font-medium">Duration</span>
@@ -207,7 +206,7 @@ export default function PackageDetailsPage() {
 
           {/* Inclusions / Exclusions Column matrix */}
           <div className="grid gap-6 sm:grid-cols-2">
-            
+
             {/* Inclusions */}
             <div className="space-y-3 p-5 rounded-[2rem] border border-emerald-100 bg-emerald-50/20 dark:border-emerald-950/20 dark:bg-emerald-950/5 shadow-sm">
               <h4 className="font-bold text-sm text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
@@ -245,7 +244,7 @@ export default function PackageDetailsPage() {
         {/* Right Sidebar Booking Action Panel */}
         <div className="lg:col-span-1">
           <div className="sticky top-28 rounded-[2rem] border border-neutral-100 bg-white p-6 shadow-lg dark:border-neutral-800 dark:bg-neutral-900/50 space-y-6">
-            
+
             <div>
               <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block mb-1">Pricing details</span>
               <div className="flex items-baseline gap-1">
@@ -289,7 +288,7 @@ export default function PackageDetailsPage() {
                 Book Campsite Now <ArrowRight className="size-4" />
               </Link>
             </Button>
-            
+
           </div>
         </div>
 

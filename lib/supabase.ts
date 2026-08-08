@@ -4,14 +4,14 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const bucketName = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'payment-screenshots';
 
-const isConfigured = 
-  !!supabaseUrl && 
-  !!supabaseAnonKey && 
+const isConfigured =
+  !!supabaseUrl &&
+  !!supabaseAnonKey &&
   !supabaseUrl.includes('your-supabase-project') &&
   !supabaseAnonKey.includes('your-supabase-anon-key');
 
-export const supabase = isConfigured 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
+export const supabase = isConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
 export interface UploadResult {
@@ -31,8 +31,8 @@ export async function uploadPaymentScreenshot(file: File, bookingId: string): Pr
   const filePath = `payments/${fileName}`;
 
   if (!supabase) {
-    console.warn(
-      'Supabase client is not fully configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.'
+    //warn(
+    'Supabase client is not fully configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.'
     );
     // Convert to Data URL as fallback so user flow continues
     return new Promise((resolve) => {
@@ -65,7 +65,7 @@ export async function uploadPaymentScreenshot(file: File, bookingId: string): Pr
       });
 
     if (uploadError) {
-      console.warn('Supabase storage upload error:', uploadError.message);
+      //warn('Supabase storage upload error:', uploadError.message);
       // Fallback to Data URL if RLS policy prevents public upload
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -96,7 +96,7 @@ export async function uploadPaymentScreenshot(file: File, bookingId: string): Pr
       filePath: uploadData.path || filePath
     };
   } catch (err: any) {
-    console.error('Unexpected error uploading to Supabase Storage:', err);
+    //error('Unexpected error uploading to Supabase Storage:', err);
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => {

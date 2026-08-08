@@ -128,7 +128,7 @@ export default function DashboardPage() {
         setBookingEditMessage({ type: 'error', message: 'Failed to update booking details. Please try again.' });
       }
     } catch (err: any) {
-      console.error(err);
+      //error(err);
       setBookingEditMessage({ type: 'error', message: err?.message || 'An error occurred while saving.' });
     } finally {
       setIsSavingBookingEdit(false);
@@ -170,15 +170,15 @@ export default function DashboardPage() {
         // Fetch bookings, packages, and user profile concurrently
         const [data, pkgsResult, profileData] = await Promise.all([
           api.getBookings(user.id, token || undefined).catch(err => {
-            console.error("Failed to load bookings:", err);
+            //error("Failed to load bookings:", err);
             return [] as Booking[];
           }),
           api.getPackages().catch(e => {
-            console.warn("Failed to load sidebar packages:", e);
+            //warn("Failed to load sidebar packages:", e);
             return null;
           }),
           api.getUserProfile(token || undefined).catch(pe => {
-            console.warn("Failed to fetch /api/user/profile:", pe);
+            //warn("Failed to fetch /api/user/profile:", pe);
             return null;
           })
         ]);
@@ -207,7 +207,7 @@ export default function DashboardPage() {
           address: freshUser.address || ""
         });
       } catch (err) {
-        console.error(err);
+        //error(err);
       } finally {
         if (!isSilent) {
           setIsLoading(false);
@@ -245,7 +245,7 @@ export default function DashboardPage() {
       await api.cancelBooking(bookingId, token);
       setBookings(prev => prev.map(b => b.bookingId === bookingId ? { ...b, status: 'rejected' } : b));
     } catch (err) {
-      console.error(err);
+      //error(err);
     }
   };
 
@@ -279,7 +279,7 @@ export default function DashboardPage() {
       setUploadSuccessId(bookingId);
       setTimeout(() => setUploadSuccessId(null), 4000);
     } catch (err) {
-      console.error("Dashboard screenshot upload error:", err);
+      //error("Dashboard screenshot upload error:", err);
     } finally {
       setUploadingBookingId(null);
     }
@@ -315,7 +315,7 @@ export default function DashboardPage() {
         setProfileErrorMessage("Failed to update profile. Please try again.");
       }
     } catch (err: any) {
-      console.error(err);
+      //error(err);
       setProfileErrorMessage(err?.message || "An error occurred. Please try again.");
     } finally {
       setIsSavingProfile(false);
@@ -421,21 +421,19 @@ export default function DashboardPage() {
       <div className="flex border-b border-neutral-100 dark:border-neutral-800 gap-8">
         <button
           onClick={() => setActiveTab("bookings")}
-          className={`flex items-center gap-2 pb-3.5 text-xs font-black uppercase tracking-wider transition-all border-b-2 ${
-            activeTab === "bookings"
+          className={`flex items-center gap-2 pb-3.5 text-xs font-black uppercase tracking-wider transition-all border-b-2 ${activeTab === "bookings"
               ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
               : "border-transparent text-neutral-400 hover:text-neutral-600"
-          }`}
+            }`}
         >
           <Compass className="size-4" /> MY BOOKINGS
         </button>
         <button
           onClick={() => setActiveTab("profile")}
-          className={`flex items-center gap-2 pb-3.5 text-xs font-black uppercase tracking-wider transition-all border-b-2 ${
-            activeTab === "profile"
+          className={`flex items-center gap-2 pb-3.5 text-xs font-black uppercase tracking-wider transition-all border-b-2 ${activeTab === "profile"
               ? "border-emerald-600 text-emerald-600 dark:text-emerald-400"
               : "border-transparent text-neutral-400 hover:text-neutral-600"
-          }`}
+            }`}
         >
           <UserIcon className="size-4" /> PROFILE SETTINGS
         </button>
@@ -897,11 +895,10 @@ export default function DashboardPage() {
             </div>
 
             {bookingEditMessage && (
-              <div className={`p-3 rounded-xl text-xs font-semibold ${
-                bookingEditMessage.type === 'success'
+              <div className={`p-3 rounded-xl text-xs font-semibold ${bookingEditMessage.type === 'success'
                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300'
                   : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300'
-              }`}>
+                }`}>
                 {bookingEditMessage.message}
               </div>
             )}

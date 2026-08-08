@@ -156,7 +156,7 @@ export default function AdminPage() {
       setPackages(pList);
       setContactMessages(cList);
     } catch (err) {
-      console.error("Failed to load admin data:", err);
+      //error("Failed to load admin data:", err);
     } finally {
       setIsLoading(false);
     }
@@ -190,7 +190,7 @@ export default function AdminPage() {
         await api.updateBookingStatus(id, newStatus, token);
       }
     } catch (err: any) {
-      console.error("Failed to update status via dropdown:", err);
+      //error("Failed to update status via dropdown:", err);
     }
   };
 
@@ -202,7 +202,7 @@ export default function AdminPage() {
         setBookings(prev => prev.map(b => b.bookingId === id ? { ...b, status: 'approved' } : b));
       }
     } catch (err) {
-      console.error("Failed to approve booking:", err);
+      //error("Failed to approve booking:", err);
     }
   };
 
@@ -217,7 +217,7 @@ export default function AdminPage() {
         setErrorPopupMessage(`Failed to reject booking #${id}.`);
       }
     } catch (err: any) {
-      console.error("Failed to reject booking:", err);
+      //error("Failed to reject booking:", err);
       setErrorPopupMessage(err?.message || `Failed to reject booking #${id}.`);
     }
   };
@@ -239,7 +239,7 @@ export default function AdminPage() {
         setErrorPopupMessage(`Booking #${id} has associated payment/permit records in the database. It has been marked as REJECTED and removed from your active pipeline.`);
       }
     } catch (err: any) {
-      console.error("Failed to delete booking:", err);
+      //error("Failed to delete booking:", err);
       try {
         const token = adminStorage.getAdminToken() || tokenStorage.getToken() || undefined;
         await api.rejectBooking(id, token);
@@ -302,7 +302,7 @@ export default function AdminPage() {
         });
       }
     } catch (err) {
-      console.error("Failed to fetch payment details:", err);
+      //error("Failed to fetch payment details:", err);
     } finally {
       setIsLoadingPayment(false);
     }
@@ -327,7 +327,7 @@ export default function AdminPage() {
         setErrorPopupMessage(`Failed to update payment status to ${status} for booking #${bookingId}.`);
       }
     } catch (err: any) {
-      console.error("Failed to update payment status:", err);
+      //error("Failed to update payment status:", err);
       setErrorPopupMessage(err?.message || `Failed to update payment status for booking #${bookingId}.`);
     } finally {
       setIsUpdatingPaymentStatus(false);
@@ -398,7 +398,7 @@ export default function AdminPage() {
       setPackages(updatedPackages);
       setIsPackageModalOpen(false);
     } catch (err) {
-      console.error("Failed to save package:", err);
+      //error("Failed to save package:", err);
     } finally {
       setIsSavingPackage(false);
     }
@@ -411,7 +411,7 @@ export default function AdminPage() {
       await api.deletePackage(id);
       setPackages(prev => prev.filter(p => String(p.id) !== String(id)));
     } catch (err: any) {
-      console.error("Failed to delete package:", err);
+      //error("Failed to delete package:", err);
       setErrorPopupMessage(err?.message || "Packages with existing bookings cannot be deleted.");
     }
   };
@@ -463,7 +463,7 @@ export default function AdminPage() {
       setIsEditModalOpen(false);
       setEditFormData(null);
     } catch (err) {
-      console.error("Failed to save booking edits:", err);
+      //error("Failed to save booking edits:", err);
     } finally {
       setIsSavingEdit(false);
     }
@@ -519,7 +519,7 @@ export default function AdminPage() {
         setEmailFeedback({ type: 'error', message: res.message });
       }
     } catch (err: any) {
-      console.error(err);
+      //error(err);
       setEmailFeedback({ type: 'error', message: err.message || 'Failed to dispatch email' });
     } finally {
       setIsSendingEmail(false);

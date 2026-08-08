@@ -8,21 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "./LoadingSpinner";
-import { 
-  Calendar, 
-  UserPlus, 
-  Users, 
-  MessageSquare, 
-  BadgeInfo, 
-  AlertCircle, 
-  Check, 
-  ArrowLeft, 
-  ShieldCheck, 
-  Upload, 
-  Copy, 
-  MapPin, 
-  Banknote, 
-  QrCode, 
+import {
+  Calendar,
+  UserPlus,
+  Users,
+  MessageSquare,
+  BadgeInfo,
+  AlertCircle,
+  Check,
+  ArrowLeft,
+  ShieldCheck,
+  Upload,
+  Copy,
+  MapPin,
+  Banknote,
+  QrCode,
   CreditCard,
   Sparkles,
   Eye,
@@ -41,10 +41,10 @@ const UPI_ID = "camplife@ybl";
 export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACKAGES }: BookingFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [packages, setPackages] = useState<Package[]>(packagesList);
-  
+
   // Wizard Step: 1 = Traveler Information, 2 = Payment & Confirmation
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
 
@@ -137,23 +137,23 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
       setIsLoadingPackages(false);
       return;
     }
-    
+
     if (packages.length > 0) {
       setIsLoadingPackages(false);
       return;
     }
-    
+
     const loadPackages = async () => {
       try {
         setIsLoadingPackages(true);
         const data = await api.getPackages();
         setPackages(data);
-        
+
         if (data.length > 0 && !formData.packageId) {
           setFormData(prev => ({ ...prev, packageId: paramPackageId || data[0].id }));
         }
       } catch (err) {
-        console.error(err);
+        //error(err);
       } finally {
         setIsLoadingPackages(false);
       }
@@ -219,14 +219,14 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
         }
       }
     } catch (e) {
-      console.error("Failed to restore draft booking:", e);
+      //error("Failed to restore draft booking:", e);
     }
   }, [currentUser]);
 
   const validateStep1 = () => {
     const tempErrors: Record<string, string> = {};
     if (!formData.fullName.trim()) tempErrors.fullName = "Lead contact name is required";
-    
+
     if (!formData.email.trim()) {
       tempErrors.email = "Email address is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -241,11 +241,11 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
 
     if (!formData.packageId) tempErrors.packageId = "Please select a campsite package";
     if (!formData.travelDate) tempErrors.travelDate = "Please select a travel date";
-    
+
     if (formData.adults < 1) tempErrors.adults = "At least 1 adult is required";
     if (formData.adults > 20) tempErrors.adults = "Maximum 20 adults allowed";
     if (formData.children > 15) tempErrors.children = "Maximum 15 children allowed";
-    
+
     travelers.forEach((t, index) => {
       if (!t.fullName.trim()) {
         tempErrors[`traveler-${index}-name`] = `Traveler #${index + 1} name is required`;
@@ -301,7 +301,7 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
       ...prev,
       [name]: name === "adults" || name === "children" ? parseInt(value) || 0 : value
     }));
-    
+
     if (errors[name]) {
       setErrors((prev) => {
         const copy = { ...prev };
@@ -404,7 +404,7 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
             token
           );
         } catch (proofErr) {
-          console.warn("UPI payment proof submission notice:", proofErr);
+          //warn("UPI payment proof submission notice:", proofErr);
         }
       } else {
         // Pay on Spot method
@@ -419,14 +419,14 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
             token
           );
         } catch (proofErr) {
-          console.warn("Pay on spot proof submission notice:", proofErr);
+          //warn("Pay on spot proof submission notice:", proofErr);
         }
       }
 
       // 3. Redirect directly to Success Page
       router.push(`/success?bookingId=${bookingId}`);
     } catch (err: any) {
-      console.error(err);
+      //error(err);
       setSubmitError(err.message || "Booking submission failed. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -452,14 +452,14 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
 
   return (
     <div ref={wizardTopRef} className="grid gap-8 lg:grid-cols-12 items-start">
-      
+
       {/* ========================================================================= */}
       {/* LEFT COLUMN: Order Review & Live Guest Roster (4 cols on lg screens)       */}
       {/* ========================================================================= */}
       <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-24">
-        
+
         <div className="rounded-[2.5rem] border border-neutral-100 bg-white p-6 shadow-xl dark:border-neutral-800 dark:bg-neutral-900 space-y-6">
-          
+
           {/* Header Badge */}
           <div className="flex items-center justify-between border-b pb-4 border-neutral-100 dark:border-neutral-800">
             <h3 className="font-extrabold text-neutral-900 dark:text-white text-base flex items-center gap-2">
@@ -566,21 +566,20 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
       {/* RIGHT COLUMN: 2-Step Interactive Wizard Form (8 cols on lg screens)       */}
       {/* ========================================================================= */}
       <div className="lg:col-span-8">
-        
+
         <div className="rounded-[2.5rem] border border-neutral-100 bg-white p-6 md:p-8 shadow-xl dark:border-neutral-800 dark:bg-neutral-900 space-y-8">
-          
+
           {/* Stepper Bar Header (Inspired by screenshot design) */}
           <div className="flex items-center justify-between border-b pb-6 border-neutral-100 dark:border-neutral-800 px-2">
-            
+
             {/* Step 1 Badge */}
             <div className="flex items-center gap-2">
-              <div className={`flex size-8 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                currentStep > 1 
-                  ? "bg-emerald-600 text-white" 
-                  : currentStep === 1 
-                    ? "bg-neutral-900 text-white dark:bg-emerald-600" 
+              <div className={`flex size-8 items-center justify-center rounded-full text-xs font-bold transition-all ${currentStep > 1
+                  ? "bg-emerald-600 text-white"
+                  : currentStep === 1
+                    ? "bg-neutral-900 text-white dark:bg-emerald-600"
                     : "bg-neutral-100 text-neutral-400 dark:bg-neutral-800"
-              }`}>
+                }`}>
                 {currentStep > 1 ? <Check className="size-4 stroke-[3]" /> : "1"}
               </div>
               <span className={`text-xs font-bold ${currentStep === 1 ? "text-neutral-900 dark:text-white" : "text-neutral-400"}`}>
@@ -592,11 +591,10 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
 
             {/* Step 2 Badge */}
             <div className="flex items-center gap-2">
-              <div className={`flex size-8 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                currentStep === 2 
-                  ? "bg-neutral-900 text-white dark:bg-emerald-600" 
+              <div className={`flex size-8 items-center justify-center rounded-full text-xs font-bold transition-all ${currentStep === 2
+                  ? "bg-neutral-900 text-white dark:bg-emerald-600"
                   : "bg-neutral-100 text-neutral-400 dark:bg-neutral-800"
-              }`}>
+                }`}>
                 2
               </div>
               <span className={`text-xs font-bold ${currentStep === 2 ? "text-neutral-900 dark:text-white" : "text-neutral-400"}`}>
@@ -653,13 +651,13 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
           {/* ===================================================================== */}
           {currentStep === 1 && (
             <form onSubmit={handleProceedToStep2} className="space-y-8 animate-in fade-in duration-200">
-              
+
               {/* 1. Contact Info */}
               <div>
                 <h3 className="text-sm font-extrabold text-neutral-800 dark:text-white mb-4 border-b pb-2 border-neutral-100 dark:border-neutral-800">
                   1. Lead Contact Credentials
                 </h3>
-                
+
                 <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                   {/* Full Name */}
                   <div className="space-y-1">
@@ -670,9 +668,8 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
                       placeholder="Full name of primary traveler"
                       value={formData.fullName}
                       onChange={handleFormChange}
-                      className={`rounded-xl border border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 ${
-                        errors.fullName ? "border-destructive focus-visible:ring-destructive/30" : ""
-                      }`}
+                      className={`rounded-xl border border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 ${errors.fullName ? "border-destructive focus-visible:ring-destructive/30" : ""
+                        }`}
                     />
                     {errors.fullName && <p className="text-[10px] font-semibold text-destructive">{errors.fullName}</p>}
                   </div>
@@ -686,9 +683,8 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
                       placeholder="e.g. lead@example.com"
                       value={formData.email}
                       onChange={handleFormChange}
-                      className={`rounded-xl border border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 ${
-                        errors.email ? "border-destructive focus-visible:ring-destructive/30" : ""
-                      }`}
+                      className={`rounded-xl border border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 ${errors.email ? "border-destructive focus-visible:ring-destructive/30" : ""
+                        }`}
                     />
                     {errors.email && <p className="text-[10px] font-semibold text-destructive">{errors.email}</p>}
                   </div>
@@ -702,9 +698,8 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
                       placeholder="e.g. 9876543210"
                       value={formData.mobileNumber}
                       onChange={handleFormChange}
-                      className={`rounded-xl border border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 ${
-                        errors.mobileNumber ? "border-destructive focus-visible:ring-destructive/30" : ""
-                      }`}
+                      className={`rounded-xl border border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 ${errors.mobileNumber ? "border-destructive focus-visible:ring-destructive/30" : ""
+                        }`}
                     />
                     {errors.mobileNumber && <p className="text-[10px] font-semibold text-destructive">{errors.mobileNumber}</p>}
                   </div>
@@ -739,9 +734,8 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
                       min={new Date().toISOString().split("T")[0]}
                       value={formData.travelDate}
                       onChange={handleFormChange}
-                      className={`rounded-xl border border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 ${
-                        errors.travelDate ? "border-destructive focus-visible:ring-destructive/30" : ""
-                      }`}
+                      className={`rounded-xl border border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 ${errors.travelDate ? "border-destructive focus-visible:ring-destructive/30" : ""
+                        }`}
                     />
                     {errors.travelDate && <p className="text-[10px] font-semibold text-destructive">{errors.travelDate}</p>}
                   </div>
@@ -810,8 +804,8 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
                   {travelers.map((traveler, index) => {
                     const isChild = index >= formData.adults;
                     return (
-                      <div 
-                        key={index} 
+                      <div
+                        key={index}
                         className="rounded-2xl border border-neutral-100 p-5 dark:border-neutral-800 dark:bg-neutral-900/30 bg-slate-50/50 space-y-4 relative"
                       >
                         <div className="flex items-center justify-between">
@@ -833,9 +827,8 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
                               placeholder="Passenger name"
                               value={traveler.fullName}
                               onChange={(e) => handleTravelerChange(index, "fullName", e.target.value)}
-                              className={`rounded-xl h-9 text-xs border border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 ${
-                                errors[`traveler-${index}-name`] ? "border-destructive focus-visible:ring-destructive/30" : ""
-                              }`}
+                              className={`rounded-xl h-9 text-xs border border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 ${errors[`traveler-${index}-name`] ? "border-destructive focus-visible:ring-destructive/30" : ""
+                                }`}
                             />
                             {errors[`traveler-${index}-name`] && (
                               <p className="text-[9px] font-semibold text-destructive">{errors[`traveler-${index}-name`]}</p>
@@ -852,9 +845,8 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
                               max={120}
                               value={traveler.age}
                               onChange={(e) => handleTravelerChange(index, "age", e.target.value)}
-                              className={`rounded-xl h-9 text-xs border border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 ${
-                                errors[`traveler-${index}-age`] ? "border-destructive focus-visible:ring-destructive/30" : ""
-                              }`}
+                              className={`rounded-xl h-9 text-xs border border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 ${errors[`traveler-${index}-age`] ? "border-destructive focus-visible:ring-destructive/30" : ""
+                                }`}
                             />
                             {errors[`traveler-${index}-age`] && (
                               <p className="text-[9px] font-semibold text-destructive">{errors[`traveler-${index}-age`]}</p>
@@ -899,9 +891,8 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
                               placeholder="e.g. ID card number"
                               value={traveler.idProofNumber}
                               onChange={(e) => handleTravelerChange(index, "idProofNumber", e.target.value)}
-                              className={`rounded-xl h-9 text-xs border border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 ${
-                                errors[`traveler-${index}-idproof`] ? "border-destructive focus-visible:ring-destructive/30" : ""
-                              }`}
+                              className={`rounded-xl h-9 text-xs border border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 ${errors[`traveler-${index}-idproof`] ? "border-destructive focus-visible:ring-destructive/30" : ""
+                                }`}
                             />
                             {errors[`traveler-${index}-idproof`] && (
                               <p className="text-[9px] font-semibold text-destructive">{errors[`traveler-${index}-idproof`]}</p>
@@ -984,7 +975,7 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
           {/* ===================================================================== */}
           {currentStep === 2 && (
             <form onSubmit={handleFinalBookingSubmit} className="space-y-8 animate-in fade-in duration-200">
-              
+
               <div>
                 <h3 className="text-sm font-extrabold text-neutral-800 dark:text-white mb-1">
                   Select Payment Method
@@ -995,19 +986,17 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
 
                 {/* Payment Method Cards (Inspired by Reference Screenshot) */}
                 <div className="grid gap-4 sm:grid-cols-2">
-                  
+
                   {/* Option A: UPI QR Code */}
                   <div
                     onClick={() => setPaymentMethod("upi_qr")}
-                    className={`cursor-pointer rounded-2xl p-4 border-2 transition-all flex items-start gap-3 relative ${
-                      paymentMethod === "upi_qr"
+                    className={`cursor-pointer rounded-2xl p-4 border-2 transition-all flex items-start gap-3 relative ${paymentMethod === "upi_qr"
                         ? "border-emerald-600 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-md"
                         : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-300"
-                    }`}
+                      }`}
                   >
-                    <div className={`flex size-10 items-center justify-center rounded-xl shrink-0 ${
-                      paymentMethod === "upi_qr" ? "bg-emerald-600 text-white" : "bg-neutral-100 text-neutral-500 dark:bg-neutral-800"
-                    }`}>
+                    <div className={`flex size-10 items-center justify-center rounded-xl shrink-0 ${paymentMethod === "upi_qr" ? "bg-emerald-600 text-white" : "bg-neutral-100 text-neutral-500 dark:bg-neutral-800"
+                      }`}>
                       <QrCode className="size-5" />
                     </div>
                     <div>
@@ -1023,15 +1012,13 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
                   {/* Option B: Pay at Campsite / On Spot */}
                   <div
                     onClick={() => setPaymentMethod("pay_on_spot")}
-                    className={`cursor-pointer rounded-2xl p-4 border-2 transition-all flex items-start gap-3 relative ${
-                      paymentMethod === "pay_on_spot"
+                    className={`cursor-pointer rounded-2xl p-4 border-2 transition-all flex items-start gap-3 relative ${paymentMethod === "pay_on_spot"
                         ? "border-emerald-600 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-md"
                         : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-300"
-                    }`}
+                      }`}
                   >
-                    <div className={`flex size-10 items-center justify-center rounded-xl shrink-0 ${
-                      paymentMethod === "pay_on_spot" ? "bg-emerald-600 text-white" : "bg-neutral-100 text-neutral-500 dark:bg-neutral-800"
-                    }`}>
+                    <div className={`flex size-10 items-center justify-center rounded-xl shrink-0 ${paymentMethod === "pay_on_spot" ? "bg-emerald-600 text-white" : "bg-neutral-100 text-neutral-500 dark:bg-neutral-800"
+                      }`}>
                       <Banknote className="size-5" />
                     </div>
                     <div>
@@ -1053,13 +1040,13 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
               {/* ======================================================= */}
               {paymentMethod === "upi_qr" && (
                 <div className="rounded-2xl border border-neutral-100 bg-slate-50/50 p-6 dark:border-neutral-800 dark:bg-neutral-950/40 space-y-6 animate-in fade-in duration-200">
-                  
+
                   <div className="flex flex-col sm:flex-row items-center gap-6 justify-between border-b pb-6 border-neutral-200/60 dark:border-neutral-800">
-                    
+
                     {/* Scannable QR Code */}
                     <div className="flex flex-col items-center">
                       <div className="relative rounded-2xl bg-white p-3 border border-neutral-200 dark:bg-white dark:border-neutral-800 flex flex-col items-center justify-center size-44 shadow-md">
-                        <img 
+                        <img
                           src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiQrUri)}`}
                           alt="UPI QR Code"
                           className="size-36 object-contain rounded-lg"
@@ -1162,7 +1149,7 @@ export function BookingForm({ initialPackageId = "", packagesList = DEFAULT_PACK
 
               {/* Navigation & Submit Buttons */}
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-                
+
                 {/* Back to Step 1 Button */}
                 <button
                   type="button"

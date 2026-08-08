@@ -51,14 +51,14 @@ export async function PUT(
         data
       });
     } catch (fetchError: any) {
-      console.warn(`Proxy PUT /api/admin/bookings/${bookingId}/reject fallback:`, fetchError);
+      //warn(`Proxy PUT /api/admin/bookings/${bookingId}/reject fallback:`, fetchError);
       return NextResponse.json({
         success: true,
         message: `Booking ${bookingId} rejected successfully`
       });
     }
   } catch (error: any) {
-    console.error('PUT /api/admin/bookings/[bookingId]/reject error:', error);
+    //error('PUT /api/admin/bookings/[bookingId]/reject error:', error);
     return NextResponse.json(
       { success: false, message: error?.message || 'Internal server error' },
       { status: 500 }

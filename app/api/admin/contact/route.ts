@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
           return NextResponse.json(data);
         }
       } catch (err) {
-        console.warn(`GET ${url} warning:`, err);
+        //warn(`GET ${url} warning:`, err);
       }
     }
 
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       ]
     });
   } catch (error: any) {
-    console.error('GET /api/admin/contact error:', error);
+    //error('GET /api/admin/contact error:', error);
     return NextResponse.json(
       { success: false, message: error?.message || 'Internal server error' },
       { status: 500 }

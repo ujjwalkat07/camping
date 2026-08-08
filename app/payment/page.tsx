@@ -24,7 +24,7 @@ function PaymentContent() {
   const [utrNumber, setUtrNumber] = useState("");
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [screenshotName, setScreenshotName] = useState("");
-  
+
   const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -54,7 +54,7 @@ function PaymentContent() {
           setBooking(data);
         }
       } catch (err) {
-        console.error(err);
+        //error(err);
       } finally {
         setIsLoading(false);
       }
@@ -110,7 +110,7 @@ function PaymentContent() {
         setError("Failed to register payment proof. Please verify the Booking ID.");
       }
     } catch (err) {
-      console.error(err);
+      //error(err);
       setError("An error occurred during submission. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -143,7 +143,7 @@ function PaymentContent() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 md:px-8 space-y-8">
-      
+
       {/* Step Indicator */}
       <BookingSteps currentStep={2} />
 
@@ -169,10 +169,10 @@ function PaymentContent() {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
-        
+
         {/* Left Column: Traveler Details Verification & Price Breakdown (2 cols) */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* Booking Summary Box */}
           <div className="rounded-[2rem] border border-neutral-100 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 space-y-4">
             <h3 className="text-sm font-extrabold text-neutral-800 dark:text-white border-b pb-2 border-neutral-100 dark:border-neutral-800 flex items-center gap-2">
@@ -202,7 +202,7 @@ function PaymentContent() {
             {/* Traveler list detail cards */}
             <div className="space-y-3 pt-2">
               <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 block">Travellers Registration details:</span>
-              
+
               <div className="grid gap-3">
                 {booking.travelers.map((t, idx) => (
                   <div key={idx} className="flex flex-col sm:flex-row justify-between items-start sm:items-center rounded-xl p-3 border border-neutral-100 bg-slate-50/30 dark:border-neutral-800/80 dark:bg-neutral-900/50 text-xs">
@@ -253,9 +253,9 @@ function PaymentContent() {
 
         {/* Right Column: QR Code & Payment proof submit (1 col) */}
         <div className="lg:col-span-1 space-y-6">
-          
+
           <div className="rounded-[2rem] border border-neutral-100 bg-white p-6 shadow-lg dark:border-neutral-800 dark:bg-neutral-900/50 flex flex-col items-center text-center space-y-5">
-            
+
             <div>
               <span className="text-[10px] text-neutral-400 font-bold block">Booking ID Session</span>
               <span className="text-sm font-extrabold text-neutral-800 dark:text-emerald-500 font-mono">{booking.bookingId}</span>
@@ -263,7 +263,7 @@ function PaymentContent() {
 
             {/* Real Scannable UPI QR Code (Bug #12 fix) */}
             <div className="relative rounded-2xl bg-white p-3 border border-neutral-100 dark:bg-white dark:border-neutral-800 flex flex-col items-center justify-center size-48 shadow-md group">
-              <img 
+              <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
                   `upi://pay?pa=${upiId}&pn=CampLife%20Adventures&am=${booking.totalAmount}&tr=${booking.bookingId}&tn=Booking%20${booking.bookingId}&cu=INR`
                 )}`}
@@ -293,7 +293,7 @@ function PaymentContent() {
 
             {/* Submission Form */}
             <form onSubmit={handleSubmit} className="w-full text-left space-y-4">
-              
+
               {error && (
                 <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive">
                   {error}
@@ -315,7 +315,7 @@ function PaymentContent() {
               {/* Screen Upload */}
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400">Payment Receipt File</label>
-                
+
                 <div className="relative flex flex-col items-center justify-center rounded-xl border border-dashed border-neutral-200 bg-slate-50/50 p-4 text-center hover:bg-slate-50 transition-colors dark:border-neutral-800 dark:bg-neutral-950/20 dark:hover:bg-neutral-950">
                   <input
                     type="file"

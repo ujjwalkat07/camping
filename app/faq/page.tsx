@@ -17,7 +17,7 @@ export default function FAQPage() {
         const data = await api.getFAQs();
         setFaqs(data);
       } catch (err) {
-        console.error("Error loading FAQs:", err);
+        //error("Error loading FAQs:", err);
       } finally {
         setIsLoading(false);
       }
@@ -35,7 +35,7 @@ export default function FAQPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 md:px-8">
-      
+
       {/* Header */}
       <div className="text-center max-w-xl mx-auto mb-10">
         <span className="text-xs font-extrabold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider block mb-1">Got Questions?</span>

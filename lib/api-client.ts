@@ -220,7 +220,7 @@ axiosInstance.interceptors.response.use(
         newAccessToken = data?.accessToken || data?.token;
         newRefreshToken = data?.refreshToken || refreshToken;
       } catch (refreshErr) {
-        console.error('Refresh token request failed:', refreshErr);
+        //error('Refresh token request failed:', refreshErr);
       }
 
       if (newAccessToken) {

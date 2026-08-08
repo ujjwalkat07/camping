@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error: any) {
-    console.error('GET /api/user/profile error:', error);
+    //error('GET /api/user/profile error:', error);
     return NextResponse.json(
       { success: false, message: error?.message || 'Internal server error' },
       { status: 500 }
@@ -84,7 +84,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error: any) {
-    console.error('PUT /api/user/profile error:', error);
+    //error('PUT /api/user/profile error:', error);
     return NextResponse.json(
       { success: false, message: error?.message || 'Internal server error' },
       { status: 500 }

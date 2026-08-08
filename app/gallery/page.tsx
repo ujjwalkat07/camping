@@ -19,7 +19,7 @@ export default function GalleryPage() {
         const data = await api.getGallery();
         setGallery(data);
       } catch (err) {
-        console.error("Error loading gallery page:", err);
+        //error("Error loading gallery page:", err);
       } finally {
         setIsLoading(false);
       }
@@ -37,7 +37,7 @@ export default function GalleryPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 md:px-8">
-      
+
       {/* Header */}
       <div className="text-center max-w-xl mx-auto mb-10">
         <span className="text-xs font-extrabold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider block mb-1">Visual Memories</span>

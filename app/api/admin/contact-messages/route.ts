@@ -29,10 +29,10 @@ export async function GET(request: NextRequest) {
       if (response.ok) {
         return NextResponse.json(data);
       } else {
-        console.warn(`GET ${backendUrl} status ${response.status}:`, data);
+        //warn(`GET ${backendUrl} status ${response.status}:`, data);
       }
     } catch (fetchErr) {
-      console.warn(`Proxy GET ${backendUrl} warning:`, fetchErr);
+      //warn(`Proxy GET ${backendUrl} warning:`, fetchErr);
     }
 
     // Fallback data if backend has no stored contact messages yet
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       ]
     });
   } catch (error: any) {
-    console.error('GET /api/admin/contact-messages error:', error);
+    //error('GET /api/admin/contact-messages error:', error);
     return NextResponse.json(
       { success: false, message: error?.message || 'Internal server error' },
       { status: 500 }

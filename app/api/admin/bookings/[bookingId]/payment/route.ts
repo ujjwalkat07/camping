@@ -47,7 +47,7 @@ export async function GET(
 
       return NextResponse.json(data);
     } catch (fetchError: any) {
-      console.warn(`Proxy GET /api/admin/bookings/${bookingId}/payment fallback:`, fetchError);
+      //warn(`Proxy GET /api/admin/bookings/${bookingId}/payment fallback:`, fetchError);
       return NextResponse.json({
         success: true,
         data: {
@@ -61,7 +61,7 @@ export async function GET(
       });
     }
   } catch (error: any) {
-    console.error('GET /api/admin/bookings/[bookingId]/payment error:', error);
+    //error('GET /api/admin/bookings/[bookingId]/payment error:', error);
     return NextResponse.json(
       { success: false, message: error?.message || 'Internal server error' },
       { status: 500 }

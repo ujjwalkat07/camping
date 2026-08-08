@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const isPlaceholderPass = !pass || pass === 'your_smtp_app_password_here';
 
     if (isPlaceholderPass) {
-      console.log(`[SMTP Email Simulation] To: ${to} | Subject: ${subject} | From: ${from}`);
+      //log(`[SMTP Email Simulation] To: ${to} | Subject: ${subject} | From: ${from}`);
       return NextResponse.json({
         success: true,
         simulated: true,
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       message: `Email sent successfully to ${to}`
     });
   } catch (error: any) {
-    console.error('SMTP Email route error:', error);
+    //error('SMTP Email route error:', error);
     return NextResponse.json({
       success: false,
       message: error?.message || 'Failed to dispatch email via SMTP server.'

@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           activeUser = null;
         }
       } catch (err) {
-        console.warn('Failed to auto-restore session from refresh token:', err);
+        //warn('Failed to auto-restore session from refresh token:', err);
         await tokenStorage.clearAuth();
         activeUser = null;
       }

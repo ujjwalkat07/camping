@@ -261,17 +261,17 @@ function mapBackendBooking(b: any): Booking {
     pickupPoint: b.pickupPoint || b.pickup_point || 'Govindghat Bus Stand',
     travelers: rawTravelers.length > 0
       ? rawTravelers.map((t: any) => ({
-          id: t.id,
-          fullName: t.fullName || 'Traveler',
-          age: Number(t.age || 25),
-          gender: t.gender || 'MALE',
-          phoneNumber: t.phoneNumber || t.phone || '',
-          emergencyContact: t.emergencyContact || 'None',
-          idProofType: t.idProofType || 'Aadhaar Card',
-          idProofNumber: t.idProofNumber || 'N/A',
-          medicalCondition: t.medicalCondition || 'None',
-          createdAt: t.createdAt
-        }))
+        id: t.id,
+        fullName: t.fullName || 'Traveler',
+        age: Number(t.age || 25),
+        gender: t.gender || 'MALE',
+        phoneNumber: t.phoneNumber || t.phone || '',
+        emergencyContact: t.emergencyContact || 'None',
+        idProofType: t.idProofType || 'Aadhaar Card',
+        idProofNumber: t.idProofNumber || 'N/A',
+        medicalCondition: t.medicalCondition || 'None',
+        createdAt: t.createdAt
+      }))
       : [{ fullName: b.customerName || b.fullName || 'Lead Traveler', age: b.age || 25, gender: b.gender || 'MALE', idProofType: 'Aadhaar Card', idProofNumber: 'N/A' }],
     utr: b.utrNumber || b.utr,
     screenshotName: b.screenshotName || b.paymentProofName || b.fileName,
@@ -327,7 +327,7 @@ export function createPlaceholderImageFile(utrText: string = "pay on spot", file
         return new File([ab], filename, { type: mimeString });
       }
     } catch (e) {
-      console.warn("Canvas image creation fallback:", e);
+      //warn("Canvas image creation fallback:", e);
     }
   }
 
@@ -400,7 +400,7 @@ export const api = {
       tokenStorage.setUser(userObj);
       return userObj;
     } catch (err: any) {
-      console.warn('Login failed:', err.message);
+      //warn('Login failed:', err.message);
       throw new Error(err.message || 'Invalid email address or password. Please verify your credentials.');
     }
   },
@@ -533,7 +533,7 @@ export const api = {
         return items.map(mapBackendPackage);
       }
     } catch (err) {
-      console.warn('Backend getPackages failed:', err);
+      //warn('Backend getPackages failed:', err);
     }
     return [];
   },
@@ -546,7 +546,7 @@ export const api = {
         return mapBackendPackage(item);
       }
     } catch (err) {
-      console.warn(`Backend getPackageById(${id}) failed:`, err);
+      //warn(`Backend getPackageById(${id}) failed:`, err);
     }
     return null;
   },
@@ -586,7 +586,7 @@ export const api = {
       });
       return true;
     } catch (err) {
-      console.warn('Backend createPackage failed:', err);
+      //warn('Backend createPackage failed:', err);
       return false;
     }
   },
@@ -617,7 +617,7 @@ export const api = {
       });
       return true;
     } catch (err) {
-      console.warn(`Backend updatePackage(${id}) failed:`, err);
+      //warn(`Backend updatePackage(${id}) failed:`, err);
       return false;
     }
   },
@@ -631,7 +631,7 @@ export const api = {
       });
       return true;
     } catch (err: any) {
-      console.warn(`Backend deletePackage(${id}) failed:`, err);
+      //warn(`Backend deletePackage(${id}) failed:`, err);
       throw err;
     }
   },
@@ -708,7 +708,7 @@ export const api = {
         }
       }
     } catch (err) {
-      console.warn(`Fetch user bookings for getBookingById(${targetId}) notice:`, err);
+      //warn(`Fetch user bookings for getBookingById(${targetId}) notice:`, err);
     }
 
     return null;
@@ -723,7 +723,7 @@ export const api = {
         return items.map(mapBackendBooking);
       }
     } catch (err) {
-      console.warn('Fetch /api/bookings failed:', err);
+      //warn('Fetch /api/bookings failed:', err);
     }
 
     // Fallback: Admin user flow via /api/admin/bookings
@@ -741,7 +741,7 @@ export const api = {
           return userBookings.map(mapBackendBooking);
         }
       } catch (err) {
-        console.warn('Admin fetch /api/admin/bookings failed:', err);
+        //warn('Admin fetch /api/admin/bookings failed:', err);
       }
     }
 
@@ -768,7 +768,7 @@ export const api = {
           targetAmount = bk.totalAmount;
         }
       } catch (e) {
-        console.warn('Could not fetch booking details for payment proof:', e);
+        //warn('Could not fetch booking details for payment proof:', e);
       }
     }
 
@@ -793,12 +793,12 @@ export const api = {
     try {
       return await sendProof(targetAmount);
     } catch (formErr: any) {
-      console.warn('Backend payment proof submit with targetAmount failed:', formErr);
+      //warn('Backend payment proof submit with targetAmount failed:', formErr);
       if (amount > 0 && amount !== targetAmount) {
         try {
           return await sendProof(amount);
         } catch (retryErr) {
-          console.warn('Fallback retry with passed amount failed:', retryErr);
+          //warn('Fallback retry with passed amount failed:', retryErr);
         }
       }
       throw formErr;
@@ -815,7 +815,7 @@ export const api = {
       });
       return true;
     } catch (err) {
-      console.warn(`Backend cancelBooking(${targetId}) endpoint notice:`, err);
+      //warn(`Backend cancelBooking(${targetId}) endpoint notice:`, err);
       try {
         await apiClient(`/api/bookings/${targetId}`, {
           method: 'DELETE',
@@ -838,7 +838,7 @@ export const api = {
         return items.map(mapBackendBooking);
       }
     } catch (err) {
-      console.warn('Backend getAllBookings failed:', err);
+      //warn('Backend getAllBookings failed:', err);
     }
     return [];
   },
@@ -857,7 +857,7 @@ export const api = {
       });
       return true;
     } catch (err: any) {
-      console.warn(`Backend approveBooking(${targetId}) approve endpoint warning:`, err);
+      //warn(`Backend approveBooking(${targetId}) approve endpoint warning:`, err);
     }
 
     // Fallback: PUT /api/admin/bookings/{id}
@@ -871,7 +871,7 @@ export const api = {
       });
       return true;
     } catch (err: any) {
-      console.warn(`Backend approveBooking(${targetId}) fallback warning:`, err);
+      //warn(`Backend approveBooking(${targetId}) fallback warning:`, err);
     }
 
     return true;
@@ -891,7 +891,7 @@ export const api = {
       });
       return true;
     } catch (err: any) {
-      console.warn(`Backend rejectBooking(${targetId}) reject endpoint warning:`, err);
+      //warn(`Backend rejectBooking(${targetId}) reject endpoint warning:`, err);
     }
 
     // Fallback: PUT /api/admin/bookings/{id}
@@ -905,7 +905,7 @@ export const api = {
       });
       return true;
     } catch (err: any) {
-      console.warn(`Backend rejectBooking(${targetId}) fallback warning:`, err);
+      //warn(`Backend rejectBooking(${targetId}) fallback warning:`, err);
     }
 
     return true;
@@ -945,7 +945,7 @@ export const api = {
       });
       return true;
     } catch (err) {
-      console.warn('Backend updateBookingStatus failed:', err);
+      //warn('Backend updateBookingStatus failed:', err);
     }
 
     return true;
@@ -976,7 +976,7 @@ export const api = {
       });
       return true;
     } catch (err: any) {
-      console.warn(`Backend updatePaymentStatus(${targetId}, ${formattedStatus}) primary failed:`, err);
+      //warn(`Backend updatePaymentStatus(${targetId}, ${formattedStatus}) primary failed:`, err);
     }
 
     // Query param fallback: PUT /api/admin/bookings/{bookingId}/payment-status?paymentStatus=APPROVED
@@ -989,7 +989,7 @@ export const api = {
       });
       return true;
     } catch (err: any) {
-      console.warn(`Backend updatePaymentStatus(${targetId}, ${formattedStatus}) query fallback failed:`, err);
+      //warn(`Backend updatePaymentStatus(${targetId}, ${formattedStatus}) query fallback failed:`, err);
     }
 
     // Fallback: PUT /api/admin/bookings/{bookingId}/payment
@@ -1003,7 +1003,7 @@ export const api = {
       });
       return true;
     } catch (err: any) {
-      console.warn(`Backend updatePaymentStatus(${targetId}, ${formattedStatus}) /payment fallback failed:`, err);
+      //warn(`Backend updatePaymentStatus(${targetId}, ${formattedStatus}) /payment fallback failed:`, err);
     }
 
     // Fallback: approve or reject booking call
@@ -1028,7 +1028,7 @@ export const api = {
       });
       return { success: true };
     } catch (err: any) {
-      console.warn(`Backend deleteBooking(${targetId}) notice:`, err);
+      //warn(`Backend deleteBooking(${targetId}) notice:`, err);
       const isConflict = Boolean(
         err?.message?.toLowerCase().includes('conflict') ||
         err?.message?.toLowerCase().includes('existing data') ||
@@ -1065,7 +1065,7 @@ export const api = {
       }
       return res;
     } catch (err) {
-      console.warn(`Backend getBookingPaymentDetails(${targetId}) failed:`, err);
+      //warn(`Backend getBookingPaymentDetails(${targetId}) failed:`, err);
       return null;
     }
   },
@@ -1100,7 +1100,7 @@ export const api = {
       try {
         localStorage.setItem(`booking_override_${targetId}`, JSON.stringify(payload));
       } catch (e) {
-        console.warn('Failed to save local booking override:', e);
+        //warn('Failed to save local booking override:', e);
       }
     }
 
@@ -1114,7 +1114,7 @@ export const api = {
       });
       return true;
     } catch (err: any) {
-      console.warn(`Backend updateBooking(${targetId}) primary PUT /api/bookings/${targetId} failed:`, err?.message || err);
+      //warn(`Backend updateBooking(${targetId}) primary PUT /api/bookings/${targetId} failed:`, err?.message || err);
     }
     // Return true because local override was successfully saved for client persistence
     return true;
@@ -1164,7 +1164,7 @@ export const api = {
         message: res?.message || (typeof res?.data === 'string' ? res.data : 'Message sent successfully!')
       };
     } catch (err: any) {
-      console.warn('Backend submitContact failed:', err);
+      //warn('Backend submitContact failed:', err);
       return {
         success: false,
         message: err?.message || 'Failed to send message. Please try again.'
@@ -1195,7 +1195,7 @@ export const api = {
         return user;
       }
     } catch (err) {
-      console.warn('Backend getUserProfile GET /api/user/profile notice:', err);
+      //warn('Backend getUserProfile GET /api/user/profile notice:', err);
     }
     return tokenStorage.getUser();
   },
@@ -1243,7 +1243,7 @@ export const api = {
         return mergedUser;
       }
     } catch (err: any) {
-      console.warn('Backend updateUserProfile PUT /api/user/profile notice:', err?.message || err);
+      //warn('Backend updateUserProfile PUT /api/user/profile notice:', err?.message || err);
       if (err?.message?.includes('Validation Failed')) {
         throw new Error(err.message);
       }
@@ -1271,7 +1271,7 @@ export const api = {
         return mergedUser;
       }
     } catch (err: any) {
-      console.warn(`Backend updateUserProfile fallback PUT /api/users/${userId} notice:`, err?.message || err);
+      //warn(`Backend updateUserProfile fallback PUT /api/users/${userId} notice:`, err?.message || err);
     }
 
     // Save locally to tokenStorage so UI updates immediately
@@ -1311,7 +1311,7 @@ export const api = {
         }));
       }
     } catch (err) {
-      console.warn('Backend getContactMessages notice:', err);
+      //warn('Backend getContactMessages notice:', err);
     }
 
     // Default initial mock messages if backend has no stored contacts yet
@@ -1361,7 +1361,7 @@ export const api = {
         message: data.message || 'Email sent successfully!'
       };
     } catch (err: any) {
-      console.error('sendAdminEmail error:', err);
+      //error('sendAdminEmail error:', err);
       return {
         success: false,
         message: err.message || 'Failed to dispatch email'

@@ -51,14 +51,14 @@ export async function DELETE(
         data
       });
     } catch (fetchError: any) {
-      console.warn(`Proxy DELETE /api/admin/bookings/${bookingId} fallback:`, fetchError);
+      //warn(`Proxy DELETE /api/admin/bookings/${bookingId} fallback:`, fetchError);
       return NextResponse.json({
         success: true,
         message: `Booking ${bookingId} deleted successfully`
       });
     }
   } catch (error: any) {
-    console.error('DELETE /api/admin/bookings/[bookingId] error:', error);
+    //error('DELETE /api/admin/bookings/[bookingId] error:', error);
     return NextResponse.json(
       { success: false, message: error?.message || 'Internal server error' },
       { status: 500 }
