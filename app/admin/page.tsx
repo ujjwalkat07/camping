@@ -599,37 +599,37 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f6f8] text-neutral-900 dark:bg-neutral-950 dark:text-white p-4 md:p-8">
+    <div className="min-h-screen bg-[#f4f6f8] text-neutral-900 dark:bg-neutral-950 dark:text-white p-2.5 sm:p-4 md:p-8">
 
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="mx-auto max-w-7xl space-y-4 sm:space-y-6">
 
         {/* ========================================================================= */}
         {/* TOP NAVIGATION BAR                                                        */}
         {/* ========================================================================= */}
-        <header className="rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl border border-neutral-200/80 dark:border-neutral-800 p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 px-6">
+        <header className="rounded-2xl sm:rounded-3xl bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl border border-neutral-200/80 dark:border-neutral-800 p-3 sm:p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3 px-3.5 sm:px-6 overflow-hidden">
 
-          <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-start">
-            <Link href="/admin" className="flex items-center gap-2.5 font-black text-xl tracking-tight text-neutral-900 dark:text-white group">
-              <span className="size-9 rounded-2xl bg-neutral-900 text-white flex items-center justify-center text-xs font-extrabold dark:bg-emerald-600 shadow-md shadow-emerald-600/10 group-hover:scale-105 transition-transform">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+            <Link href="/admin" className="flex items-center gap-2 font-black text-lg sm:text-xl tracking-tight text-neutral-900 dark:text-white group">
+              <span className="size-8 sm:size-9 rounded-2xl bg-neutral-900 text-white flex items-center justify-center text-xs font-extrabold dark:bg-emerald-600 shadow-md shadow-emerald-600/10 group-hover:scale-105 transition-transform">
                 VA
               </span>
               <div className="flex flex-col">
-                <span className="leading-none text-base font-extrabold">ValleyAdmin</span>
-                <span className="text-[10px] text-emerald-600 font-extrabold tracking-wider uppercase">Base Portal</span>
+                <span className="leading-none text-sm sm:text-base font-extrabold">ValleyAdmin</span>
+                <span className="text-[9px] sm:text-[10px] text-emerald-600 font-extrabold tracking-wider uppercase">Base Portal</span>
               </div>
             </Link>
 
-            <nav className="flex items-center gap-1 bg-slate-100/80 dark:bg-neutral-800/80 p-1.5 rounded-2xl text-xs font-bold border border-slate-200/60 dark:border-neutral-700/50">
+            <nav className="flex items-center gap-1 bg-slate-100/80 dark:bg-neutral-800/80 p-1 sm:p-1.5 rounded-2xl text-[11px] sm:text-xs font-bold border border-slate-200/60 dark:border-neutral-700/50 w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-none shrink-0">
               <button
                 onClick={() => setActiveTab('dashboard')}
-                className={`px-4 py-2 rounded-xl transition-all font-extrabold ${activeTab === 'dashboard' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all font-extrabold shrink-0 ${activeTab === 'dashboard' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
                   }`}
               >
                 Dashboard
               </button>
               <button
                 onClick={() => setActiveTab('bookings')}
-                className={`px-4 py-2 rounded-xl transition-all font-extrabold flex items-center gap-1.5 ${activeTab === 'bookings' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all font-extrabold flex items-center gap-1.5 shrink-0 ${activeTab === 'bookings' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
                   }`}
               >
                 Bookings & Pipeline
@@ -639,7 +639,7 @@ export default function AdminPage() {
               </button>
               <button
                 onClick={() => setActiveTab('contact')}
-                className={`px-4 py-2 rounded-xl transition-all relative font-extrabold flex items-center gap-1.5 ${activeTab === 'contact' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all relative font-extrabold flex items-center gap-1.5 shrink-0 ${activeTab === 'contact' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
                   }`}
               >
                 Contact Messages
@@ -649,7 +649,7 @@ export default function AdminPage() {
               </button>
               <button
                 onClick={() => setActiveTab('packages')}
-                className={`px-4 py-2 rounded-xl transition-all font-extrabold ${activeTab === 'packages' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all font-extrabold shrink-0 ${activeTab === 'packages' ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
                   }`}
               >
                 Campsites
@@ -657,22 +657,22 @@ export default function AdminPage() {
             </nav>
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+          <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto justify-end pt-2 md:pt-0 border-t md:border-t-0 border-neutral-100 dark:border-neutral-800">
             <button 
               onClick={loadAdminData}
-              className="flex size-10 items-center justify-center rounded-2xl bg-slate-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 hover:bg-slate-200 transition-colors"
+              className="flex size-9 sm:size-10 items-center justify-center rounded-2xl bg-slate-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 hover:bg-slate-200 transition-colors"
               title="Refresh Admin Data"
             >
-              <RefreshCw className={`size-4 ${isLoading ? 'animate-spin text-emerald-600' : ''}`} />
+              <RefreshCw className={`size-3.5 sm:size-4 ${isLoading ? 'animate-spin text-emerald-600' : ''}`} />
             </button>
 
-            <button className="flex size-10 items-center justify-center rounded-2xl bg-slate-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 relative hover:bg-slate-200 transition-colors">
-              <Bell className="size-4" />
+            <button className="flex size-9 sm:size-10 items-center justify-center rounded-2xl bg-slate-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 relative hover:bg-slate-200 transition-colors">
+              <Bell className="size-3.5 sm:size-4" />
               <span className="absolute top-2 right-2 size-2 rounded-full bg-emerald-500 ring-2 ring-white" />
             </button>
 
-            <div className="flex items-center gap-3 pl-3 border-l border-neutral-200 dark:border-neutral-800">
-              <div className="size-10 rounded-2xl bg-neutral-900 text-white font-extrabold text-xs flex items-center justify-center shadow-md dark:bg-emerald-600">
+            <div className="flex items-center gap-2.5 pl-2.5 sm:pl-3 border-l border-neutral-200 dark:border-neutral-800">
+              <div className="size-9 sm:size-10 rounded-2xl bg-neutral-900 text-white font-extrabold text-xs flex items-center justify-center shadow-md dark:bg-emerald-600">
                 {adminUser?.name ? adminUser.name.charAt(0).toUpperCase() : "A"}
               </div>
               <div className="hidden sm:block text-left text-xs">
@@ -887,7 +887,7 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-3 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                   {calendarPillDays.map((d, idx) => {
                     const dStr = d.toISOString().split("T")[0];
                     const isSelected = dStr === selectedDateStr;
@@ -1182,39 +1182,39 @@ export default function AdminPage() {
 
 
         {/* ========================================================================= */}
-        {/* VIEW 3: BOOKINGS & PIPELINE TABLE VIEW (WITH UTR, SCREENSHOT VIEW & EDIT) */}
+        {/* VIEW 3: BOOKINGS & PIPELINE TABLE & CARDS VIEW (RESPONSIVE FOR < 450PX)  */}
         {/* ========================================================================= */}
         {activeTab === 'bookings' && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            <div className="rounded-3xl bg-white p-7 shadow-xs border border-neutral-200/80 dark:border-neutral-800 dark:bg-neutral-900 space-y-6">
+            <div className="rounded-2xl sm:rounded-3xl bg-white p-3.5 sm:p-7 shadow-xs border border-neutral-200/80 dark:border-neutral-800 dark:bg-neutral-900 space-y-4 sm:space-y-6">
 
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-5 border-neutral-100 dark:border-neutral-800">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b pb-4 sm:pb-5 border-neutral-100 dark:border-neutral-800">
                 <div>
-                  <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white flex items-center gap-2.5">
-                    <span className="size-8 rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center">
+                  <h2 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white flex items-center gap-2 sm:gap-2.5">
+                    <span className="size-7 sm:size-8 rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center">
                       <Compass className="size-4" />
                     </span>
                     Bookings Pipeline & Ledger
                   </h2>
-                  <p className="text-xs text-neutral-500 font-medium mt-1">Full customer reservation ledger, payment proof verification & status management</p>
+                  <p className="text-[11px] sm:text-xs text-neutral-500 font-medium mt-0.5 sm:mt-1">Full customer reservation ledger, payment proof verification & status management</p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-                  <div className="relative flex items-center flex-1 sm:w-72">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+                  <div className="relative flex items-center w-full sm:w-72">
                     <Search className="size-4 text-neutral-400 absolute left-3.5" />
                     <Input
                       type="text"
                       placeholder="Search camper, UTR, or Booking ID..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="rounded-2xl pl-10 text-xs h-10 border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 shadow-xs"
+                      className="rounded-xl sm:rounded-2xl pl-10 text-xs h-10 border-neutral-200 dark:border-neutral-800 focus-visible:ring-emerald-600/30 shadow-xs w-full"
                     />
                   </div>
 
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="flex h-10 rounded-2xl border border-neutral-200 bg-white dark:bg-neutral-900 px-3.5 text-xs font-bold text-neutral-700 dark:text-neutral-300 ring-offset-background focus:outline-none focus:ring-2 focus:ring-emerald-600/30 dark:border-neutral-800 shadow-xs cursor-pointer"
+                    className="flex h-10 rounded-xl sm:rounded-2xl border border-neutral-200 bg-white dark:bg-neutral-900 px-3.5 text-xs font-bold text-neutral-700 dark:text-neutral-300 ring-offset-background focus:outline-none focus:ring-2 focus:ring-emerald-600/30 dark:border-neutral-800 shadow-xs cursor-pointer w-full sm:w-auto"
                   >
                     <option value="all">All Statuses</option>
                     <option value="approved">Approved</option>
@@ -1225,7 +1225,8 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
+              {/* DESKTOP TABLE VIEW (Visible on md screens and up) */}
+              <div className="hidden md:block overflow-x-auto rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-xs">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-50/80 dark:bg-neutral-950/80 border-b border-neutral-200/80 dark:border-neutral-800 text-neutral-400 font-extrabold uppercase tracking-wider text-[10px]">
@@ -1409,6 +1410,158 @@ export default function AdminPage() {
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              {/* MOBILE BOOKING CARDS VIEW (Optimized for < 450px resolution) */}
+              <div className="md:hidden space-y-3.5">
+                {filteredBookings.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-neutral-400">
+                    No bookings found matching your search.
+                  </div>
+                ) : (
+                  filteredBookings.map((b) => {
+                    const truncatedId = b.bookingId.length > 14 ? `${b.bookingId.slice(0, 8)}...${b.bookingId.slice(-4)}` : b.bookingId;
+                    const formattedCreatedDate = b.createdAt ? new Date(b.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+                    return (
+                      <div key={b.bookingId} className="rounded-2xl border border-neutral-200/80 bg-white p-3.5 space-y-3 dark:border-neutral-800 dark:bg-neutral-900 shadow-2xs">
+                        
+                        {/* Card Header: Booking ID, Date, Payment Status & Status Dropdown */}
+                        <div className="flex flex-col gap-2 pb-2.5 border-b border-neutral-100 dark:border-neutral-800">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-neutral-800 font-mono text-[11px] font-bold text-neutral-800 dark:text-neutral-200 border border-neutral-200/80 dark:border-neutral-700/60" title={b.bookingId}>
+                              {truncatedId}
+                            </span>
+
+                            {/* Payment Status Pill */}
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                              (b.paymentStatus || '').toUpperCase() === 'VERIFIED' || (b.paymentStatus || '').toUpperCase() === 'APPROVED' || (b.paymentStatus || '').toUpperCase() === 'SUCCESS' || (b.paymentStatus || '').toUpperCase() === 'PAID'
+                                ? 'bg-emerald-100/80 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900'
+                                : (b.paymentStatus || '').toUpperCase() === 'REJECTED' || (b.paymentStatus || '').toUpperCase() === 'FAILED'
+                                  ? 'bg-rose-100/80 text-rose-800 dark:bg-rose-950 dark:text-rose-400 border border-rose-200 dark:border-rose-900'
+                                  : 'bg-amber-100/80 text-amber-800 dark:bg-amber-950 dark:text-amber-400 border border-amber-200 dark:border-amber-900'
+                            }`}>
+                              <span className={`size-1.5 rounded-full ${
+                                (b.paymentStatus || '').toUpperCase() === 'VERIFIED' || (b.paymentStatus || '').toUpperCase() === 'APPROVED' || (b.paymentStatus || '').toUpperCase() === 'SUCCESS' || (b.paymentStatus || '').toUpperCase() === 'PAID'
+                                  ? 'bg-emerald-500'
+                                  : (b.paymentStatus || '').toUpperCase() === 'REJECTED' || (b.paymentStatus || '').toUpperCase() === 'FAILED'
+                                    ? 'bg-rose-500'
+                                    : 'bg-amber-500'
+                              }`} />
+                              {b.paymentStatus ? b.paymentStatus.toUpperCase() : 'NOT_PAID'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 text-[10px] text-neutral-400">
+                            {formattedCreatedDate ? <span>Booked on {formattedCreatedDate}</span> : <span />}
+                            
+                            {/* Booking Status Dropdown */}
+                            <select
+                              value={b.status}
+                              onChange={(e) => handleBookingStatusDropdownChange(b.bookingId, e.target.value)}
+                              className={`rounded-xl border px-2 py-1 text-[11px] font-bold outline-none cursor-pointer h-7 ${
+                                b.status === 'approved'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                  : b.status === 'rejected'
+                                    ? 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300'
+                                    : 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300'
+                              }`}
+                            >
+                              <option value="approved">✓ Approved</option>
+                              <option value="pending">⏳ Pending</option>
+                              <option value="rejected">✕ Rejected</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Lead Camper Contact */}
+                        <div className="flex items-center gap-2.5">
+                          <div className="size-9 rounded-2xl bg-neutral-900 text-white font-extrabold text-xs flex items-center justify-center shrink-0 dark:bg-emerald-600">
+                            {b.fullName ? b.fullName.charAt(0).toUpperCase() : 'C'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <strong className="text-xs sm:text-sm font-extrabold text-neutral-900 dark:text-white block truncate">{b.fullName}</strong>
+                            <div className="text-[10px] text-neutral-500 dark:text-neutral-400 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                              <span className="font-mono">{b.mobileNumber}</span>
+                              {b.email && <span className="truncate max-w-[150px]">{b.email}</span>}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Package, Pickup Point, Travel Date & Total Amount */}
+                        <div className="grid grid-cols-2 gap-2 text-xs p-2.5 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-800">
+                          <div>
+                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-neutral-400 block">Package & Pickup</span>
+                            <strong className="text-neutral-900 dark:text-white block line-clamp-1 text-[11px]">{b.packageName}</strong>
+                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 mt-0.5 truncate">
+                              <MapPin className="size-3 shrink-0" /> {b.pickupPoint || 'Govindghat Bus Stand'}
+                            </span>
+                          </div>
+
+                          <div>
+                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-neutral-400 block">Travel Date & Guests</span>
+                            <span className="font-bold text-neutral-800 dark:text-neutral-200 block text-[11px]">{b.travelDate}</span>
+                            <span className="text-[10px] text-neutral-500 font-medium block">
+                              {b.adults + b.children} Guests ({b.adults}A, {b.children}C)
+                            </span>
+                          </div>
+
+                          <div className="col-span-2 flex items-center justify-between pt-1.5 border-t border-neutral-200/50 dark:border-neutral-800">
+                            <div>
+                              <span className="text-[9px] font-extrabold uppercase tracking-wider text-neutral-400 block">Total Amount</span>
+                              <span className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400">₹{b.totalAmount.toLocaleString('en-IN')}</span>
+                            </div>
+
+                            <div className="text-right">
+                              <span className="text-[9px] font-extrabold uppercase tracking-wider text-neutral-400 block">Payment / UTR</span>
+                              <span className="font-mono text-[10px] font-extrabold text-neutral-700 dark:text-neutral-300 block">
+                                {b.utr ? `UTR: ${b.utr}` : (b.screenshotUrl === 'PAY_ON_SPOT' ? 'Pay on Spot' : 'N/A')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Actions Grid */}
+                        <div className="grid grid-cols-4 gap-1 pt-0.5">
+                          <Button
+                            onClick={() => handleOpenViewDetailsModal(b)}
+                            size="sm"
+                            className="rounded-xl text-[10px] sm:text-[11px] h-7 sm:h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-1 flex items-center justify-center gap-1 shadow-xs"
+                          >
+                            <Eye className="size-3" /> Details
+                          </Button>
+
+                          <Button
+                            onClick={() => handleOpenEditModal(b)}
+                            size="sm"
+                            variant="outline"
+                            className="rounded-xl text-[10px] sm:text-[11px] h-7 sm:h-8 border-neutral-200 dark:border-neutral-800 font-extrabold px-1 flex items-center justify-center gap-1"
+                          >
+                            <Edit className="size-3" /> Edit
+                          </Button>
+
+                          <Button
+                            onClick={() => handleOpenEmailComposer(b.email, `Booking Update — ${b.bookingId}`, `Hi ${b.fullName},\n\nYour campsite booking status is ${b.status.toUpperCase()}.\n\nTotal Amount: ₹${b.totalAmount}\n\nBest regards,\nValley Base Team`)}
+                            size="sm"
+                            variant="outline"
+                            className="rounded-xl text-[10px] sm:text-[11px] h-7 sm:h-8 border-neutral-200 dark:border-neutral-800 font-extrabold px-1 flex items-center justify-center gap-1"
+                          >
+                            <Send className="size-3" /> Email
+                          </Button>
+
+                          <Button
+                            onClick={() => handleDeleteBooking(b.bookingId)}
+                            size="sm"
+                            variant="outline"
+                            className="rounded-xl text-[10px] sm:text-[11px] h-7 sm:h-8 text-rose-600 border-rose-200 hover:bg-rose-50 dark:border-rose-950/40 font-extrabold px-1 flex items-center justify-center gap-1"
+                          >
+                            <Trash2 className="size-3" /> Delete
+                          </Button>
+                        </div>
+
+                      </div>
+                    );
+                  })
+                )}
               </div>
 
             </div>
