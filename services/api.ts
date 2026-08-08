@@ -91,6 +91,7 @@ export interface Booking {
   children: number;
   travelDate: string;
   specialRequests?: string;
+  pickupPoint?: string;
   travelers: TravelerDetail[];
   totalAmount: number;
   status: 'pending_payment' | 'pending' | 'approved' | 'rejected' | 'deleted' | string;
@@ -216,6 +217,7 @@ function applyLocalOverride(booking: Booking): Booking {
       fullName: override.customerName || override.fullName || booking.fullName,
       mobileNumber: override.phone || override.mobileNumber || booking.mobileNumber,
       specialRequests: override.specialRequest || override.specialRequests || booking.specialRequests,
+      pickupPoint: override.pickupPoint || booking.pickupPoint,
       travelers: booking.travelers.map((t, idx) => idx === 0 ? {
         ...t,
         fullName: override.customerName || override.fullName || t.fullName,
@@ -254,14 +256,15 @@ function mapBackendBooking(b: any): Booking {
     travelDate: b.travelDate || new Date().toISOString().split('T')[0],
     totalAmount: Number(b.totalAmount || (b.adults * 5000) + (b.children * 2500) || 5000),
     status: normalizeStatus(rawStatus),
-    paymentStatus: String(b.paymentStatus || b.payment_status || 'PENDING').toUpperCase(),
-    specialRequests: b.specialRequest || b.specialRequests,
+    paymentStatus: String(b.paymentStatus || b.payment_status || 'NOT_PAID').toUpperCase(),
+    specialRequests: b.specialRequest || b.specialRequests || 'None',
+    pickupPoint: b.pickupPoint || b.pickup_point || 'Govindghat Bus Stand',
     travelers: rawTravelers.length > 0
       ? rawTravelers.map((t: any) => ({
           id: t.id,
           fullName: t.fullName || 'Traveler',
           age: Number(t.age || 25),
-          gender: t.gender || 'Male',
+          gender: t.gender || 'MALE',
           phoneNumber: t.phoneNumber || t.phone || '',
           emergencyContact: t.emergencyContact || 'None',
           idProofType: t.idProofType || 'Aadhaar Card',
@@ -269,7 +272,7 @@ function mapBackendBooking(b: any): Booking {
           medicalCondition: t.medicalCondition || 'None',
           createdAt: t.createdAt
         }))
-      : [{ fullName: b.customerName || b.fullName || 'Lead Traveler', age: b.age || 25, gender: b.gender || 'Male', idProofType: 'Aadhaar Card', idProofNumber: 'N/A' }],
+      : [{ fullName: b.customerName || b.fullName || 'Lead Traveler', age: b.age || 25, gender: b.gender || 'MALE', idProofType: 'Aadhaar Card', idProofNumber: 'N/A' }],
     utr: b.utrNumber || b.utr,
     screenshotName: b.screenshotName || b.paymentProofName || b.fileName,
     screenshotUrl: b.screenshot || b.screenshotUrl || b.imageUrl || b.paymentProofUrl || b.proofUrl || b.url,
@@ -832,29 +835,7 @@ export const api = {
       const res = await apiClient<any>('/api/admin/bookings', { requiresAdmin: true, token });
       const items = Array.isArray(res) ? res : res?.data || res?.content || [];
       if (Array.isArray(items)) {
-        const bookings = items.map(mapBackendBooking);
-        const enrichedBookings = await Promise.all(
-          bookings.map(async (b) => {
-            if (!b.bookingId) return b;
-            try {
-              const payDetails = await api.getBookingPaymentDetails(b.bookingId, token);
-              if (payDetails && (payDetails.paymentStatus || payDetails.status)) {
-                const statusVal = String(payDetails.paymentStatus || payDetails.status).toUpperCase();
-                return {
-                  ...b,
-                  paymentStatus: statusVal,
-                  utr: payDetails.utrNumber || payDetails.utr || b.utr,
-                  screenshotUrl: payDetails.screenshotUrl || b.screenshotUrl,
-                  paymentDetails: payDetails
-                };
-              }
-            } catch (e) {
-              console.warn(`Failed to pre-fetch payment details for ${b.bookingId}:`, e);
-            }
-            return b;
-          })
-        );
-        return enrichedBookings;
+        return items.map(mapBackendBooking);
       }
     } catch (err) {
       console.warn('Backend getAllBookings failed:', err);

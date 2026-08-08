@@ -69,6 +69,15 @@ export default function AdminPage() {
   const [editFormData, setEditFormData] = useState<Booking | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
+  // Full Booking Details Audit Modal State
+  const [isViewDetailsModalOpen, setIsViewDetailsModalOpen] = useState(false);
+  const [selectedBookingForDetails, setSelectedBookingForDetails] = useState<Booking | null>(null);
+
+  const handleOpenViewDetailsModal = (booking: Booking) => {
+    setSelectedBookingForDetails(booking);
+    setIsViewDetailsModalOpen(true);
+  };
+
   // Package Management Modal State
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
@@ -557,6 +566,9 @@ export default function AdminPage() {
     const matchesSearch = b.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       b.bookingId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       b.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (b.pickupPoint && b.pickupPoint.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (b.specialRequests && b.specialRequests.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (b.travelers && b.travelers.some(t => t.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || (t.phoneNumber && t.phoneNumber.includes(searchTerm)))) ||
       (b.utr && b.utr.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = statusFilter === "all" || b.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -1217,9 +1229,9 @@ export default function AdminPage() {
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-50/80 dark:bg-neutral-950/80 border-b border-neutral-200/80 dark:border-neutral-800 text-neutral-400 font-extrabold uppercase tracking-wider text-[10px]">
-                      <th className="py-4 px-4">Booking ID</th>
+                      <th className="py-4 px-4">Booking ID & Date</th>
                       <th className="py-4 px-4">Camper Info</th>
-                      <th className="py-4 px-4">Package</th>
+                      <th className="py-4 px-4">Package & Pickup</th>
                       <th className="py-4 px-4">Travel Date</th>
                       <th className="py-4 px-4 text-center">Guests</th>
                       <th className="py-4 px-4">Total Amount</th>
@@ -1232,12 +1244,18 @@ export default function AdminPage() {
                   <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60 bg-white dark:bg-neutral-900">
                     {filteredBookings.map((b) => {
                       const truncatedId = b.bookingId.length > 14 ? `${b.bookingId.slice(0, 8)}...${b.bookingId.slice(-4)}` : b.bookingId;
+                      const formattedCreatedDate = b.createdAt ? new Date(b.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
                       return (
                         <tr key={b.bookingId} className="hover:bg-slate-50/80 dark:hover:bg-neutral-800/40 transition-colors">
                           <td className="py-4 px-4 whitespace-nowrap">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-neutral-800 text-[11px] font-mono font-bold text-neutral-800 dark:text-neutral-200 border border-neutral-200/80 dark:border-neutral-700/60" title={b.bookingId}>
-                              {truncatedId}
-                            </span>
+                            <div className="space-y-0.5">
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-neutral-800 text-[11px] font-mono font-bold text-neutral-800 dark:text-neutral-200 border border-neutral-200/80 dark:border-neutral-700/60" title={b.bookingId}>
+                                {truncatedId}
+                              </span>
+                              {formattedCreatedDate && (
+                                <span className="block text-[10px] text-neutral-400 font-medium">Booked: {formattedCreatedDate}</span>
+                              )}
+                            </div>
                           </td>
 
                           <td className="py-4 px-4 whitespace-nowrap">
@@ -1248,14 +1266,20 @@ export default function AdminPage() {
                               <div>
                                 <strong className="text-neutral-900 dark:text-white block font-extrabold text-xs leading-tight">{b.fullName}</strong>
                                 <span className="text-[10px] text-neutral-400 font-mono block mt-0.5">{b.mobileNumber}</span>
+                                {b.email && <span className="text-[10px] text-neutral-400 block">{b.email}</span>}
                               </div>
                             </div>
                           </td>
 
                           <td className="py-4 px-4 whitespace-nowrap">
-                            <span className="font-bold text-neutral-800 dark:text-neutral-200">
-                              {b.packageName}
-                            </span>
+                            <div>
+                              <span className="font-extrabold text-neutral-900 dark:text-white block text-xs">
+                                {b.packageName}
+                              </span>
+                              <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5">
+                                <MapPin className="size-3 shrink-0" /> {b.pickupPoint || 'Govindghat Bus Stand'}
+                              </span>
+                            </div>
                           </td>
 
                           <td className="py-4 px-4 whitespace-nowrap">
@@ -1266,9 +1290,14 @@ export default function AdminPage() {
                           </td>
 
                           <td className="py-4 px-4 text-center whitespace-nowrap">
-                            <span className="inline-block px-2.5 py-1 rounded-full bg-slate-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-[11px] font-extrabold">
-                              {b.adults + b.children}
-                            </span>
+                            <div className="space-y-0.5">
+                              <span className="inline-block px-2.5 py-1 rounded-full bg-slate-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-[11px] font-extrabold">
+                                {b.adults + b.children} Guests
+                              </span>
+                              <span className="block text-[9px] font-bold text-neutral-400">
+                                ({b.adults}A, {b.children}C)
+                              </span>
+                            </div>
                           </td>
 
                           <td className="py-4 px-4 whitespace-nowrap">
@@ -1287,7 +1316,7 @@ export default function AdminPage() {
                                 onClick={() => handleViewPaymentDetails(b.bookingId)}
                                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[10px] font-extrabold hover:bg-emerald-100 transition-colors border border-emerald-200/60 dark:border-emerald-900/50 shadow-2xs"
                               >
-                                <Eye className="size-3" /> View Payment Details
+                                <Eye className="size-3" /> Payment Proof
                               </button>
                             </div>
                           </td>
@@ -1295,20 +1324,20 @@ export default function AdminPage() {
                           {/* PAYMENT STATUS COLUMN */}
                           <td className="py-4 px-4 whitespace-nowrap">
                             <span className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                              (b.paymentStatus || '').toUpperCase() === 'VERIFIED' || (b.paymentStatus || '').toUpperCase() === 'APPROVED' || (b.paymentStatus || '').toUpperCase() === 'SUCCESS'
+                              (b.paymentStatus || '').toUpperCase() === 'VERIFIED' || (b.paymentStatus || '').toUpperCase() === 'APPROVED' || (b.paymentStatus || '').toUpperCase() === 'SUCCESS' || (b.paymentStatus || '').toUpperCase() === 'PAID'
                                 ? 'bg-emerald-100/80 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900'
                                 : (b.paymentStatus || '').toUpperCase() === 'REJECTED' || (b.paymentStatus || '').toUpperCase() === 'FAILED'
                                   ? 'bg-rose-100/80 text-rose-800 dark:bg-rose-950 dark:text-rose-400 border border-rose-200 dark:border-rose-900'
                                   : 'bg-amber-100/80 text-amber-800 dark:bg-amber-950 dark:text-amber-400 border border-amber-200 dark:border-amber-900'
                             }`}>
                               <span className={`size-1.5 rounded-full ${
-                                (b.paymentStatus || '').toUpperCase() === 'VERIFIED' || (b.paymentStatus || '').toUpperCase() === 'APPROVED' || (b.paymentStatus || '').toUpperCase() === 'SUCCESS'
+                                (b.paymentStatus || '').toUpperCase() === 'VERIFIED' || (b.paymentStatus || '').toUpperCase() === 'APPROVED' || (b.paymentStatus || '').toUpperCase() === 'SUCCESS' || (b.paymentStatus || '').toUpperCase() === 'PAID'
                                   ? 'bg-emerald-500'
                                   : (b.paymentStatus || '').toUpperCase() === 'REJECTED' || (b.paymentStatus || '').toUpperCase() === 'FAILED'
                                     ? 'bg-rose-500'
                                     : 'bg-amber-500'
                               }`} />
-                              {b.paymentStatus ? b.paymentStatus.toUpperCase() : 'PENDING'}
+                              {b.paymentStatus ? b.paymentStatus.toUpperCase() : 'NOT_PAID'}
                             </span>
                           </td>
 
@@ -1335,6 +1364,15 @@ export default function AdminPage() {
                           {/* ACTIONS COLUMN */}
                           <td className="py-4 px-4 text-right whitespace-nowrap">
                             <div className="inline-flex items-center justify-end gap-1.5">
+                              <Button
+                                onClick={() => handleOpenViewDetailsModal(b)}
+                                size="sm"
+                                className="rounded-xl text-xs h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold shadow-xs flex items-center gap-1"
+                                title="View Full Details & Travellers"
+                              >
+                                <Eye className="size-3.5" /> Details
+                              </Button>
+
                               <Button
                                 onClick={() => handleOpenEditModal(b)}
                                 size="sm"
@@ -1550,7 +1588,33 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Row 3: UTR & Status */}
+              {/* Row 3: Pickup Point & Special Request Notes */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="font-bold text-neutral-700 dark:text-neutral-300">Pickup Point *</label>
+                  <Input
+                    type="text"
+                    required
+                    placeholder="e.g. Govindghat Bus Stand"
+                    value={editFormData.pickupPoint || 'Govindghat Bus Stand'}
+                    onChange={(e) => handleEditInputChange('pickupPoint', e.target.value)}
+                    className="rounded-xl h-9 text-xs border-neutral-200 dark:border-neutral-800"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-neutral-700 dark:text-neutral-300">Special Request Notes</label>
+                  <Input
+                    type="text"
+                    placeholder="e.g. Vegetarian meals / First floor tent"
+                    value={editFormData.specialRequests || 'None'}
+                    onChange={(e) => handleEditInputChange('specialRequests', e.target.value)}
+                    className="rounded-xl h-9 text-xs border-neutral-200 dark:border-neutral-800"
+                  />
+                </div>
+              </div>
+
+              {/* Row 4: UTR & Status */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1">
                   <label className="font-bold text-neutral-700 dark:text-neutral-300">Payment UTR Number</label>
@@ -1584,48 +1648,92 @@ export default function AdminPage() {
                   Individual Traveler Credentials ({editFormData.travelers.length}):
                 </span>
 
-                <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+                <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
                   {editFormData.travelers.map((t, idx) => (
-                    <div key={idx} className="grid gap-2 sm:grid-cols-4 p-3 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-800">
-                      <div>
-                        <label className="text-[9px] font-bold text-neutral-400 block">Name</label>
-                        <Input
-                          type="text"
-                          value={t.fullName}
-                          onChange={(e) => handleTravelerEditChange(idx, 'fullName', e.target.value)}
-                          className="rounded-lg h-7 text-[11px] border-neutral-200 dark:border-neutral-800"
-                        />
+                    <div key={idx} className="space-y-2 p-3 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-800">
+                      <div className="grid gap-2 sm:grid-cols-4">
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-400 block">Full Name</label>
+                          <Input
+                            type="text"
+                            value={t.fullName}
+                            onChange={(e) => handleTravelerEditChange(idx, 'fullName', e.target.value)}
+                            className="rounded-lg h-7 text-[11px] border-neutral-200 dark:border-neutral-800 font-bold"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-400 block">Age</label>
+                          <Input
+                            type="number"
+                            value={t.age}
+                            onChange={(e) => handleTravelerEditChange(idx, 'age', e.target.value)}
+                            className="rounded-lg h-7 text-[11px] border-neutral-200 dark:border-neutral-800"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-400 block">Gender</label>
+                          <select
+                            value={t.gender || 'MALE'}
+                            onChange={(e) => handleTravelerEditChange(idx, 'gender', e.target.value)}
+                            className="flex h-7 w-full rounded-lg border border-neutral-200 bg-transparent px-2 text-[11px] dark:border-neutral-800 dark:bg-neutral-900 font-bold"
+                          >
+                            <option value="MALE">MALE</option>
+                            <option value="FEMALE">FEMALE</option>
+                            <option value="OTHER">OTHER</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-400 block">Phone Number</label>
+                          <Input
+                            type="tel"
+                            value={t.phoneNumber || ''}
+                            onChange={(e) => handleTravelerEditChange(idx, 'phoneNumber', e.target.value)}
+                            className="rounded-lg h-7 text-[11px] border-neutral-200 dark:border-neutral-800 font-mono"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="text-[9px] font-bold text-neutral-400 block">Age</label>
-                        <Input
-                          type="number"
-                          value={t.age}
-                          onChange={(e) => handleTravelerEditChange(idx, 'age', e.target.value)}
-                          className="rounded-lg h-7 text-[11px] border-neutral-200 dark:border-neutral-800"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[9px] font-bold text-neutral-400 block">ID Proof Type</label>
-                        <select
-                          value={t.idProofType}
-                          onChange={(e) => handleTravelerEditChange(idx, 'idProofType', e.target.value)}
-                          className="flex h-7 w-full rounded-lg border border-neutral-200 bg-transparent px-2 text-[11px] dark:border-neutral-800 dark:bg-neutral-900"
-                        >
-                          <option value="Aadhaar Card">Aadhaar Card</option>
-                          <option value="Passport">Passport</option>
-                          <option value="Voter ID">Voter ID</option>
-                          <option value="Driving License">Driving License</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[9px] font-bold text-neutral-400 block">ID Number</label>
-                        <Input
-                          type="text"
-                          value={t.idProofNumber}
-                          onChange={(e) => handleTravelerEditChange(idx, 'idProofNumber', e.target.value)}
-                          className="rounded-lg h-7 text-[11px] border-neutral-200 dark:border-neutral-800 font-mono"
-                        />
+
+                      <div className="grid gap-2 sm:grid-cols-4">
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-400 block">ID Proof Type</label>
+                          <select
+                            value={t.idProofType}
+                            onChange={(e) => handleTravelerEditChange(idx, 'idProofType', e.target.value)}
+                            className="flex h-7 w-full rounded-lg border border-neutral-200 bg-transparent px-2 text-[11px] dark:border-neutral-800 dark:bg-neutral-900"
+                          >
+                            <option value="Aadhaar Card">Aadhaar Card</option>
+                            <option value="Passport">Passport</option>
+                            <option value="Voter ID">Voter ID</option>
+                            <option value="Driving License">Driving License</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-400 block">ID Number</label>
+                          <Input
+                            type="text"
+                            value={t.idProofNumber}
+                            onChange={(e) => handleTravelerEditChange(idx, 'idProofNumber', e.target.value)}
+                            className="rounded-lg h-7 text-[11px] border-neutral-200 dark:border-neutral-800 font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-400 block">Emergency Contact</label>
+                          <Input
+                            type="text"
+                            value={t.emergencyContact || 'None'}
+                            onChange={(e) => handleTravelerEditChange(idx, 'emergencyContact', e.target.value)}
+                            className="rounded-lg h-7 text-[11px] border-neutral-200 dark:border-neutral-800"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-400 block">Medical Condition</label>
+                          <Input
+                            type="text"
+                            value={t.medicalCondition || 'None'}
+                            onChange={(e) => handleTravelerEditChange(idx, 'medicalCondition', e.target.value)}
+                            className="rounded-lg h-7 text-[11px] border-neutral-200 dark:border-neutral-800"
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1676,6 +1784,241 @@ export default function AdminPage() {
               </div>
 
             </form>
+
+          </div>
+        </div>
+      )}
+
+
+      {/* ========================================================================= */}
+      {/* VIEW FULL BOOKING DETAILS & TRAVELLERS ROSTER MODAL                        */}
+      {/* ========================================================================= */}
+      {isViewDetailsModalOpen && selectedBookingForDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="w-full max-w-4xl my-8 rounded-[2.5rem] bg-white p-6 md:p-8 shadow-2xl dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 space-y-6 relative max-h-[90vh] overflow-y-auto">
+
+            {/* Modal Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center gap-3">
+                <div className="size-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                  <FileText className="size-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-black text-neutral-900 dark:text-white leading-tight">
+                      Booking #{selectedBookingForDetails.bookingId}
+                    </h3>
+                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                      selectedBookingForDetails.status === 'approved'
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400'
+                        : selectedBookingForDetails.status === 'rejected'
+                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-400'
+                          : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400'
+                    }`}>
+                      {selectedBookingForDetails.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-neutral-400 mt-0.5">
+                    Booked on: {selectedBookingForDetails.createdAt ? new Date(selectedBookingForDetails.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setIsViewDetailsModalOpen(false);
+                    handleOpenEditModal(selectedBookingForDetails);
+                  }}
+                  className="rounded-xl text-xs font-bold border-neutral-200 dark:border-neutral-800 flex items-center gap-1.5"
+                >
+                  <Edit className="size-3.5" /> Edit Booking
+                </Button>
+                <button
+                  onClick={() => setIsViewDetailsModalOpen(false)}
+                  className="flex size-9 items-center justify-center rounded-full bg-slate-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 transition-colors"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content Body */}
+            <div className="space-y-6 text-xs">
+
+              {/* Grid 1: Customer & Booking Summary */}
+              <div className="grid gap-4 sm:grid-cols-3 p-5 rounded-3xl bg-slate-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-800">
+                
+                {/* Lead Customer Info */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <User className="size-3" /> Lead Customer Contact
+                  </span>
+                  <div className="space-y-0.5">
+                    <strong className="text-sm font-extrabold text-neutral-900 dark:text-white block">{selectedBookingForDetails.fullName}</strong>
+                    <div className="text-neutral-500 dark:text-neutral-400 flex items-center gap-1">
+                      <Mail className="size-3" /> <span>{selectedBookingForDetails.email || 'N/A'}</span>
+                    </div>
+                    <div className="text-neutral-500 dark:text-neutral-400 flex items-center gap-1 font-mono">
+                      <Phone className="size-3" /> <span>{selectedBookingForDetails.mobileNumber || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Trek & Location Details */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <MapPin className="size-3" /> Trek & Pickup Information
+                  </span>
+                  <div className="space-y-0.5">
+                    <strong className="text-xs font-bold text-neutral-900 dark:text-white block">{selectedBookingForDetails.packageName} (ID: {selectedBookingForDetails.packageId})</strong>
+                    <div className="text-neutral-500 dark:text-neutral-400">
+                      <span className="font-semibold">Travel Date:</span> <span className="font-bold text-neutral-800 dark:text-neutral-200">{selectedBookingForDetails.travelDate}</span>
+                    </div>
+                    <div className="text-neutral-500 dark:text-neutral-400">
+                      <span className="font-semibold">Pickup Point:</span> <span className="font-bold text-emerald-600 dark:text-emerald-400">{selectedBookingForDetails.pickupPoint || 'Govindghat Bus Stand'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pricing & Guests */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <Users className="size-3" /> Guests & Payment Overview
+                  </span>
+                  <div className="space-y-0.5">
+                    <div className="text-neutral-500 dark:text-neutral-400">
+                      <span className="font-semibold">Guests Count:</span> <span className="font-bold text-neutral-900 dark:text-white">{selectedBookingForDetails.adults} Adults, {selectedBookingForDetails.children} Children</span>
+                    </div>
+                    <div className="text-neutral-500 dark:text-neutral-400">
+                      <span className="font-semibold">Total Amount:</span> <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">₹{selectedBookingForDetails.totalAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="text-neutral-500 dark:text-neutral-400">
+                      <span className="font-semibold">Payment Status:</span> <span className="font-mono font-bold text-neutral-800 dark:text-neutral-200">{selectedBookingForDetails.paymentStatus || 'NOT_PAID'}</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Grid 2: Special Request & Payment Proof details */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 block">Special Request Notes:</span>
+                  <p className="text-xs font-medium text-neutral-800 dark:text-neutral-200 italic">
+                    "{selectedBookingForDetails.specialRequests || 'None'}"
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 block">Payment Audit / UTR:</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-neutral-900 dark:text-white">
+                      UTR: {selectedBookingForDetails.utr || 'N/A'}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setIsViewDetailsModalOpen(false);
+                        handleViewPaymentDetails(selectedBookingForDetails.bookingId);
+                      }}
+                      className="text-[10px] font-bold text-emerald-600 hover:underline dark:text-emerald-400 flex items-center gap-1"
+                    >
+                      View Receipt & Proof &rarr;
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: Travellers Roster Table */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
+                    <Users className="size-4 text-emerald-600" />
+                    Registered Travellers Roster ({selectedBookingForDetails.travelers.length})
+                  </h4>
+                  <span className="text-[10px] text-neutral-400 font-medium">Full guest list for Forest Department permit processing</span>
+                </div>
+
+                <div className="overflow-x-auto rounded-2xl border border-neutral-200 dark:border-neutral-800">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 dark:bg-neutral-950 text-neutral-400 font-extrabold uppercase text-[9px] tracking-wider border-b border-neutral-200 dark:border-neutral-800">
+                        <th className="py-3 px-3"># ID</th>
+                        <th className="py-3 px-3">Full Name</th>
+                        <th className="py-3 px-3">Age / Gender</th>
+                        <th className="py-3 px-3">Phone Number</th>
+                        <th className="py-3 px-3">Emergency Contact</th>
+                        <th className="py-3 px-3">ID Proof Type & Number</th>
+                        <th className="py-3 px-3">Medical Condition</th>
+                        <th className="py-3 px-3 text-right">Created At</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800 bg-white dark:bg-neutral-900">
+                      {selectedBookingForDetails.travelers.map((t, idx) => (
+                        <tr key={t.id || idx} className="hover:bg-slate-50 dark:hover:bg-neutral-800/50">
+                          <td className="py-3 px-3 font-mono text-[10px] text-neutral-400 font-bold">
+                            #{t.id || (idx + 1)}
+                          </td>
+                          <td className="py-3 px-3 font-extrabold text-neutral-900 dark:text-white">
+                            {t.fullName}
+                          </td>
+                          <td className="py-3 px-3 font-medium text-neutral-700 dark:text-neutral-300 whitespace-nowrap">
+                            {t.age} yrs • <span className="uppercase font-bold text-[10px] text-emerald-600 dark:text-emerald-400">{t.gender || 'MALE'}</span>
+                          </td>
+                          <td className="py-3 px-3 font-mono text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
+                            {t.phoneNumber || selectedBookingForDetails.mobileNumber || 'N/A'}
+                          </td>
+                          <td className="py-3 px-3 text-neutral-600 dark:text-neutral-400">
+                            {t.emergencyContact || 'None'}
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className="font-semibold text-neutral-800 dark:text-neutral-200 block">{t.idProofType}</span>
+                            <span className="font-mono text-[10px] text-neutral-400">{t.idProofNumber}</span>
+                          </td>
+                          <td className="py-3 px-3 text-neutral-600 dark:text-neutral-400">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                              t.medicalCondition && t.medicalCondition.toLowerCase() !== 'none'
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                                : 'bg-slate-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
+                            }`}>
+                              {t.medicalCondition || 'None'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono text-[10px] text-neutral-400 whitespace-nowrap">
+                            {t.createdAt ? new Date(t.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-between pt-3 border-t border-neutral-100 dark:border-neutral-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleOpenEmailComposer(selectedBookingForDetails.email, `Valley of Flowers Booking Confirmation — ${selectedBookingForDetails.bookingId}`)}
+                  className="rounded-xl text-xs font-bold border-neutral-200 dark:border-neutral-800 flex items-center gap-1.5"
+                >
+                  <Send className="size-3.5" /> Email Lead Guest
+                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsViewDetailsModalOpen(false)}
+                    className="rounded-xl text-xs font-bold border-neutral-200 dark:border-neutral-800"
+                  >
+                    Close Window
+                  </Button>
+                </div>
+              </div>
+
+            </div>
 
           </div>
         </div>
