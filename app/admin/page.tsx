@@ -642,6 +642,11 @@ export default function AdminPage() {
       (b.utr && b.utr.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = statusFilter === "all" || b.status === statusFilter;
     return matchesSearch && matchesStatus;
+  }).sort((a, b) => {
+    // Sort by most recent first (newest bookings at top)
+    const dateA = new Date(a.createdAt || a.date || 0).getTime();
+    const dateB = new Date(b.createdAt || b.date || 0).getTime();
+    return dateB - dateA;
   });
 
   // Filter Contact Messages
