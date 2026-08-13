@@ -341,6 +341,91 @@ export function createPlaceholderImageFile(utrText: string = "pay on spot", file
   return new File([png1x1Bytes], filename, { type: 'image/png' });
 }
 
+function helperDataURLtoFile(dataurl: string, filename: string): File {
+  const arr = dataurl.split(',');
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, { type: mime });
+}
+
+const executePackageMultipartRequest = async (
+  endpoint: string,
+  payload: any,
+  imageFile: File | Blob | undefined,
+  httpMethod: 'POST' | 'PUT'
+): Promise<boolean> => {
+  console.log('[PackageMultipart] Starting request:', httpMethod, endpoint);
+  console.log('[PackageMultipart] Payload:', JSON.stringify(payload));
+  console.log('[PackageMultipart] Has imageFile:', !!imageFile);
+
+  const formData = new FormData();
+
+  // The 'data' part must be sent as a Blob with application/json content type
+  // so Spring Boot @RequestPart can deserialize it via Jackson
+  const jsonBlob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+  formData.append('data', jsonBlob);
+
+  // The 'image' part is optional binary file
+  if (imageFile) {
+    formData.append('image', imageFile);
+  }
+
+  await apiFormClient(endpoint, formData, true, undefined, httpMethod);
+  return true;
+};
+
+// Helper to build CreatePackageRequest payload matching the backend.
+// Backend accepts itinerary as an array of { dayNo, title, description } objects.
+// NOTE: there is NO 'images' field — image goes as separate multipart part.
+function buildPackagePayload(pkg: any): any {
+  // itinerary: backend accepts an array of { dayNo, title, description } objects
+  let itinerary: { dayNo: number; title: string; description: string }[];
+  if (Array.isArray(pkg.itinerary) && pkg.itinerary.length > 0) {
+    itinerary = pkg.itinerary.map((it: any, idx: number) => ({
+      dayNo: Number(it.dayNo || it.day || idx + 1),
+      title: String(it.title || `Day ${idx + 1}`),
+      description: String(it.description || (Array.isArray(it.activities) ? it.activities.join(', ') : '') || 'Camping & Trekking')
+    }));
+  } else if (pkg.itinerary && typeof pkg.itinerary === 'object' && !Array.isArray(pkg.itinerary)) {
+    // Handle legacy single-object format by wrapping in array
+    itinerary = [{
+      dayNo: Number(pkg.itinerary.dayNo || 1),
+      title: String(pkg.itinerary.title || 'Day 1'),
+      description: String(pkg.itinerary.description || 'Camping & Trekking')
+    }];
+  } else {
+    itinerary = [{
+      dayNo: 1,
+      title: 'Day 1: Arrival & Base Camp',
+      description: 'Arrive at base camp, check-in, and trek briefing'
+    }];
+  }
+
+  const meals = pkg.meals && typeof pkg.meals === 'object'
+    ? {
+      breakfast: String(pkg.meals.breakfast || 'Included'),
+      lunch: String(pkg.meals.lunch || 'Included'),
+      dinner: String(pkg.meals.dinner || 'Included')
+    }
+    : { breakfast: 'Included', lunch: 'Included', dinner: 'Included' };
+
+  return {
+    title: String(pkg.name || pkg.title || ''),
+    description: String(pkg.description || pkg.shortDescription || ''),
+    price: Math.max(Number(pkg.price) || 0, 0.01),
+    duration: String(pkg.duration || '3 Days / 2 Nights'),
+    location: String(pkg.location || 'Valley of Flowers, Uttarakhand'),
+    itinerary,
+    meals
+  };
+}
+
 export const api = {
   // --- Authentication Operations ---
   register: async (email: string, password?: string, name?: string, mobileNumber?: string): Promise<any> => {
@@ -553,69 +638,44 @@ export const api = {
 
   createPackage: async (newPkg: any): Promise<boolean> => {
     try {
-      const payload = {
-        title: newPkg.name || newPkg.title,
-        name: newPkg.name || newPkg.title,
-        description: newPkg.description || newPkg.shortDescription || '',
-        shortDescription: newPkg.shortDescription || newPkg.description || '',
-        price: Number(newPkg.price) || 0,
-        duration: newPkg.duration || '3 Days / 2 Nights',
-        location: newPkg.location || 'Valley of Flowers, Uttarakhand',
-        images: newPkg.imageUrl ? [newPkg.imageUrl] : (newPkg.images || ['https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=1200&q=80']),
-        itinerary: newPkg.itinerary?.[0] ? {
-          dayNo: 1,
-          title: newPkg.itinerary[0].title || 'Day 1',
-          description: newPkg.itinerary[0].activities?.join(', ') || 'Trek & Explore'
-        } : {
-          dayNo: 1,
-          title: 'Trek',
-          description: 'Camping & Trekking'
-        },
-        meals: {
-          breakfast: 'Included',
-          lunch: 'Included',
-          dinner: 'Included'
-        }
-      };
+      const payload = buildPackagePayload(newPkg);
 
-      await apiClient('/api/admin/packages', {
-        method: 'POST',
-        requiresAdmin: true,
-        requiresAuth: true,
-        body: JSON.stringify(payload)
-      });
-      return true;
+      // Extract image file from the input
+      let imageFile: File | Blob | undefined = newPkg.imageFile;
+      if (!imageFile && newPkg.imageUrl && typeof newPkg.imageUrl === 'string' && newPkg.imageUrl.startsWith('data:image/')) {
+        try {
+          imageFile = helperDataURLtoFile(newPkg.imageUrl, 'package_cover.png');
+        } catch { }
+      } else if (!imageFile && Array.isArray(newPkg.images) && typeof newPkg.images[0] === 'string' && newPkg.images[0].startsWith('data:image/')) {
+        try {
+          imageFile = helperDataURLtoFile(newPkg.images[0], 'package_cover.png');
+        } catch { }
+      }
+
+      return await executePackageMultipartRequest('/api/admin/packages', payload, imageFile, 'POST');
     } catch (err) {
       //warn('Backend createPackage failed:', err);
       return false;
     }
   },
 
-  updatePackage: async (id: string, updatedFields: Partial<Package>): Promise<boolean> => {
+  updatePackage: async (id: string, updatedFields: any): Promise<boolean> => {
     try {
-      const payload = {
-        title: updatedFields.name || updatedFields.shortDescription,
-        name: updatedFields.name,
-        description: updatedFields.description || updatedFields.shortDescription,
-        price: Number(updatedFields.price),
-        duration: updatedFields.duration,
-        location: updatedFields.location,
-        images: updatedFields.images,
-        itinerary: {
-          dayNo: 1,
-          title: 'Trek Day',
-          description: updatedFields.description
-        },
-        meals: { breakfast: 'Included', lunch: 'Included', dinner: 'Included' }
-      };
+      const payload = buildPackagePayload(updatedFields);
 
-      await apiClient(`/api/admin/packages/${id}`, {
-        method: 'PUT',
-        requiresAdmin: true,
-        requiresAuth: true,
-        body: JSON.stringify(payload)
-      });
-      return true;
+      // Extract image file from the input
+      let imageFile: File | Blob | undefined = updatedFields.imageFile;
+      if (!imageFile && updatedFields.imageUrl && typeof updatedFields.imageUrl === 'string' && updatedFields.imageUrl.startsWith('data:image/')) {
+        try {
+          imageFile = helperDataURLtoFile(updatedFields.imageUrl, 'package_cover.png');
+        } catch { }
+      } else if (!imageFile && Array.isArray(updatedFields.images) && typeof updatedFields.images[0] === 'string' && updatedFields.images[0].startsWith('data:image/')) {
+        try {
+          imageFile = helperDataURLtoFile(updatedFields.images[0], 'package_cover.png');
+        } catch { }
+      }
+
+      return await executePackageMultipartRequest(`/api/admin/packages/${id}`, payload, imageFile, 'PUT');
     } catch (err) {
       //warn(`Backend updatePackage(${id}) failed:`, err);
       return false;

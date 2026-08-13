@@ -297,7 +297,8 @@ export async function apiFormClient<T = any>(
   endpoint: string,
   formData: FormData,
   requiresAuth = true,
-  customToken?: string
+  customToken?: string,
+  method: 'POST' | 'PUT' | 'PATCH' = 'POST'
 ): Promise<T> {
   let path = endpoint;
   if (path.startsWith(String(BACKEND_URL))) {
@@ -307,19 +308,36 @@ export async function apiFormClient<T = any>(
     path = '/' + path;
   }
 
+  // Build full URL from BACKEND_URL
+  const fullUrl = `${BACKEND_URL}${path}`;
+
   const headers: Record<string, string> = {};
 
-  const token = customToken || tokenStorage.getToken();
+  const token = customToken || tokenStorage.getToken() || adminStorage.getAdminToken();
   if (requiresAuth && token) {
     headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
   }
 
-  const response = await axiosInstance.post(path, formData, {
-    headers: {
-      ...headers,
-      'Content-Type': 'multipart/form-data',
-    },
+  // Use native fetch() instead of Axios to avoid:
+  // 1. Axios default Content-Type: application/json overriding multipart boundary
+  // 2. Axios response interceptor catching 400 as auth error and retrying
+  // Do NOT set Content-Type — the browser will auto-generate multipart/form-data with boundary
+  const response = await fetch(fullUrl, {
+    method,
+    headers,
+    body: formData,
   });
 
-  return response.data as T;
+  if (!response.ok) {
+    const errorBody = await response.text();
+    let errorMsg = `Request failed with status ${response.status}`;
+    try {
+      const parsed = JSON.parse(errorBody);
+      errorMsg = parsed.message || parsed.error || errorMsg;
+    } catch {}
+    throw new Error(errorMsg);
+  }
+
+  const data = await response.json();
+  return data as T;
 }

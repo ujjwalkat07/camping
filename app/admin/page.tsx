@@ -41,7 +41,9 @@ import {
   Clock,
   CheckCircle,
   Filter,
-  Save
+  Save,
+  Utensils,
+  Upload
 } from "lucide-react";
 import Link from "next/link";
 
@@ -81,14 +83,31 @@ export default function AdminPage() {
   // Package Management Modal State
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
-  const [packageFormData, setPackageFormData] = useState({
+  const [packageFormData, setPackageFormData] = useState<{
+    name: string;
+    price: number;
+    duration: string;
+    shortDescription: string;
+    description: string;
+    location: string;
+    imageUrl: string;
+    imageFile?: File;
+    itinerary: { dayNo: number; title: string; description: string }[];
+    meals: { breakfast: string; lunch: string; dinner: string };
+  }>({
     name: '',
     price: 5000,
     duration: '3 Days / 2 Nights',
     shortDescription: '',
     description: '',
     location: 'Valley of Flowers, Uttarakhand',
-    imageUrl: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=1200&q=80'
+    imageUrl: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=1200&q=80',
+    itinerary: [
+      { dayNo: 1, title: 'Day 1: Govindghat to Ghangaria', description: '14km trek along Bhyundar Ganga river with trek guide' },
+      { dayNo: 2, title: 'Day 2: Valley of Flowers Trek', description: 'Explore high altitude alpine flora, rare species, and streams' },
+      { dayNo: 3, title: 'Day 3: Return Trek & Departure', description: 'Descend back to Govindghat and trip conclusion' }
+    ],
+    meals: { breakfast: 'Included', lunch: 'Included', dinner: 'Included' }
   });
   const [isSavingPackage, setIsSavingPackage] = useState(false);
 
@@ -334,7 +353,29 @@ export default function AdminPage() {
     }
   };
 
-  // Package CRUD Handlers
+  // Package CRUD Handlers & Local Browser File Picker
+  const handlePackageImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert("Please select a valid image file (PNG, JPG, WEBP).");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setPackageFormData(prev => ({
+          ...prev,
+          imageUrl: event.target!.result as string,
+          imageFile: file
+        }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleOpenAddPackageModal = () => {
     setEditingPackage(null);
     setPackageFormData({
@@ -344,13 +385,32 @@ export default function AdminPage() {
       shortDescription: '',
       description: '',
       location: 'Valley of Flowers, Uttarakhand',
-      imageUrl: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=1200&q=80'
+      imageUrl: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=1200&q=80',
+      imageFile: undefined,
+      itinerary: [
+        { dayNo: 1, title: 'Day 1: Govindghat to Ghangaria', description: '14km trek along Bhyundar Ganga river with trek guide' },
+        { dayNo: 2, title: 'Day 2: Valley of Flowers Trek', description: 'Explore high altitude alpine flora, rare species, and streams' },
+        { dayNo: 3, title: 'Day 3: Return Trek & Departure', description: 'Descend back to Govindghat and trip conclusion' }
+      ],
+      meals: { breakfast: 'Included', lunch: 'Included', dinner: 'Included' }
     });
     setIsPackageModalOpen(true);
   };
 
   const handleOpenEditPackageModal = (pkg: Package) => {
     setEditingPackage(pkg);
+    const existingItinerary = Array.isArray(pkg.itinerary) && pkg.itinerary.length > 0
+      ? pkg.itinerary.map((it: any, idx: number) => ({
+          dayNo: Number(it.day || it.dayNo || idx + 1),
+          title: it.title || `Day ${idx + 1}`,
+          description: (Array.isArray(it.activities) && it.activities.length > 0)
+            ? it.activities.join(', ')
+            : (it.description || 'Camping & Trekking')
+        }))
+      : [
+          { dayNo: 1, title: 'Day 1: Trek & Base Camp', description: pkg.description || 'Camping & Trekking' }
+        ];
+
     setPackageFormData({
       name: pkg.name || '',
       price: pkg.price || 5000,
@@ -358,7 +418,10 @@ export default function AdminPage() {
       shortDescription: pkg.shortDescription || '',
       description: pkg.description || pkg.shortDescription || '',
       location: pkg.location || 'Valley of Flowers, Uttarakhand',
-      imageUrl: pkg.images?.[0] || 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=1200&q=80'
+      imageUrl: pkg.images?.[0] || 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=1200&q=80',
+      imageFile: undefined,
+      itinerary: existingItinerary,
+      meals: { breakfast: 'Included', lunch: 'Included', dinner: 'Included' }
     });
     setIsPackageModalOpen(true);
   };
@@ -378,7 +441,11 @@ export default function AdminPage() {
           shortDescription: packageFormData.shortDescription || packageFormData.description,
           description: packageFormData.description,
           location: packageFormData.location,
-          images: [packageFormData.imageUrl]
+          imageUrl: packageFormData.imageUrl,
+          imageFile: packageFormData.imageFile,
+          images: [packageFormData.imageUrl],
+          itinerary: packageFormData.itinerary,
+          meals: packageFormData.meals
         });
       } else {
         // POST /api/admin/packages
@@ -389,7 +456,10 @@ export default function AdminPage() {
           shortDescription: packageFormData.shortDescription || packageFormData.description,
           description: packageFormData.description,
           location: packageFormData.location,
-          imageUrl: packageFormData.imageUrl
+          imageUrl: packageFormData.imageUrl,
+          imageFile: packageFormData.imageFile,
+          itinerary: packageFormData.itinerary,
+          meals: packageFormData.meals
         });
       }
 
@@ -2394,16 +2464,80 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="font-bold text-neutral-700 dark:text-neutral-300">Image URL *</label>
-                <Input
-                  type="url"
-                  required
-                  placeholder="https://images.unsplash.com/..."
-                  value={packageFormData.imageUrl}
-                  onChange={(e) => setPackageFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
-                  className="rounded-xl text-xs border-neutral-200 dark:border-neutral-800"
-                />
+              {/* PACKAGE IMAGE UPLOADER (LOCAL BROWSER FILE PICKER) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-neutral-700 dark:text-neutral-300">
+                    Campsite Cover Image *
+                  </label>
+                  <span className="text-[10px] text-emerald-600 font-semibold">Upload from your device</span>
+                </div>
+
+                {packageFormData.imageUrl ? (
+                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-neutral-950 border border-neutral-200/80 dark:border-neutral-800 shadow-2xs">
+                    <img
+                      src={packageFormData.imageUrl}
+                      alt="Selected Package Cover"
+                      className="size-16 rounded-xl object-cover border border-neutral-200 dark:border-neutral-700 shrink-0 shadow-xs"
+                    />
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <span className="text-xs font-extrabold text-neutral-900 dark:text-white block truncate">
+                        Cover Image Loaded
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <label className="cursor-pointer inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-extrabold shadow-xs transition-colors">
+                          <Upload className="size-3" /> Change Image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handlePackageImageFileChange}
+                          />
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={() => setPackageFormData(prev => ({ ...prev, imageUrl: '' }))}
+                          className="px-2.5 py-1 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-[10px] font-bold dark:border-rose-950/40 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center p-5 rounded-2xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-emerald-500 dark:hover:border-emerald-500 bg-slate-50/50 dark:bg-neutral-950/50 cursor-pointer transition-colors text-center space-y-2 group">
+                    <div className="size-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Upload className="size-5" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-extrabold text-neutral-800 dark:text-neutral-200 block">
+                        Click to select image file from computer
+                      </span>
+                      <span className="text-[10px] text-neutral-400 font-medium block mt-0.5">
+                        Supports PNG, JPG, JPEG, WEBP files
+                      </span>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      required={!packageFormData.imageUrl}
+                      className="hidden"
+                      onChange={handlePackageImageFileChange}
+                    />
+                  </label>
+                )}
+
+                {/* Optional Web URL Fallback */}
+                <div className="pt-1">
+                  <Input
+                    type="text"
+                    placeholder="Or paste web image URL (optional)"
+                    value={packageFormData.imageUrl.startsWith('data:') ? '' : packageFormData.imageUrl}
+                    onChange={(e) => setPackageFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
+                    className="rounded-xl text-[11px] h-8 border-neutral-200 dark:border-neutral-800 text-neutral-500"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -2427,6 +2561,131 @@ export default function AdminPage() {
                   onChange={(e) => setPackageFormData(prev => ({ ...prev, description: e.target.value }))}
                   className="rounded-xl text-xs border-neutral-200 dark:border-neutral-800"
                 />
+              </div>
+
+              {/* DYNAMIC ITINERARY DAYS BUILDER */}
+              <div className="space-y-3 border-t pt-3 border-neutral-100 dark:border-neutral-800">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-extrabold text-neutral-900 dark:text-white text-xs flex items-center gap-1.5">
+                      <CalendarIcon className="size-3.5 text-emerald-600" /> Day-wise Itinerary ({packageFormData.itinerary.length} Days)
+                    </h4>
+                    <span className="text-[10px] text-neutral-400">Configure day 1, day 2, day 3... trek schedule details</span>
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setPackageFormData(prev => ({
+                        ...prev,
+                        itinerary: [
+                          ...prev.itinerary,
+                          {
+                            dayNo: prev.itinerary.length + 1,
+                            title: `Day ${prev.itinerary.length + 1}: Trek & Camp`,
+                            description: 'Daily trek activity, sightseeing & camping stay'
+                          }
+                        ]
+                      }));
+                    }}
+                    className="rounded-xl text-[10px] font-extrabold h-7 px-2.5 border-emerald-200 text-emerald-700 dark:border-emerald-900 dark:text-emerald-300 flex items-center gap-1"
+                  >
+                    <Plus className="size-3" /> Add Day {packageFormData.itinerary.length + 1}
+                  </Button>
+                </div>
+
+                <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                  {packageFormData.itinerary.map((it, idx) => (
+                    <div key={idx} className="p-3 rounded-2xl bg-slate-50 dark:bg-neutral-950 border border-neutral-200/80 dark:border-neutral-800 space-y-2 relative">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-1">
+                          <span className="size-6 rounded-lg bg-emerald-600 text-white font-mono text-[10px] font-black flex items-center justify-center shrink-0">
+                            D{it.dayNo}
+                          </span>
+                          <Input
+                            type="text"
+                            required
+                            placeholder={`Day ${it.dayNo} Title (e.g. Govindghat to Ghangaria)`}
+                            value={it.title}
+                            onChange={(e) => {
+                              const updated = [...packageFormData.itinerary];
+                              updated[idx].title = e.target.value;
+                              setPackageFormData(prev => ({ ...prev, itinerary: updated }));
+                            }}
+                            className="rounded-xl text-xs h-8 font-bold border-neutral-200 dark:border-neutral-800 flex-1"
+                          />
+                        </div>
+
+                        {packageFormData.itinerary.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = packageFormData.itinerary.filter((_, i) => i !== idx).map((item, i) => ({ ...item, dayNo: i + 1 }));
+                              setPackageFormData(prev => ({ ...prev, itinerary: updated }));
+                            }}
+                            className="p-1 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shrink-0"
+                            title="Remove Day"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <Textarea
+                        rows={1.5}
+                        required
+                        placeholder={`Day ${it.dayNo} Detailed Description (e.g. 14km trek along river, check-in at hotel...)`}
+                        value={it.description}
+                        onChange={(e) => {
+                          const updated = [...packageFormData.itinerary];
+                          updated[idx].description = e.target.value;
+                          setPackageFormData(prev => ({ ...prev, itinerary: updated }));
+                        }}
+                        className="rounded-xl text-xs border-neutral-200 dark:border-neutral-800"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* MEALS CONFIGURATION */}
+              <div className="space-y-2 border-t pt-3 border-neutral-100 dark:border-neutral-800">
+                <h4 className="font-extrabold text-neutral-900 dark:text-white text-xs flex items-center gap-1.5">
+                  <Utensils className="size-3.5 text-emerald-600" /> Included Meals
+                </h4>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold text-neutral-500 block mb-0.5">Breakfast</label>
+                    <Input
+                      type="text"
+                      value={packageFormData.meals.breakfast}
+                      onChange={(e) => setPackageFormData(prev => ({ ...prev, meals: { ...prev.meals, breakfast: e.target.value } }))}
+                      className="rounded-xl text-xs h-8 border-neutral-200 dark:border-neutral-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-neutral-500 block mb-0.5">Lunch</label>
+                    <Input
+                      type="text"
+                      value={packageFormData.meals.lunch}
+                      onChange={(e) => setPackageFormData(prev => ({ ...prev, meals: { ...prev.meals, lunch: e.target.value } }))}
+                      className="rounded-xl text-xs h-8 border-neutral-200 dark:border-neutral-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-neutral-500 block mb-0.5">Dinner</label>
+                    <Input
+                      type="text"
+                      value={packageFormData.meals.dinner}
+                      onChange={(e) => setPackageFormData(prev => ({ ...prev, meals: { ...prev.meals, dinner: e.target.value } }))}
+                      className="rounded-xl text-xs h-8 border-neutral-200 dark:border-neutral-800"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
